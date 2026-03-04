@@ -1,0 +1,82 @@
+You are building the @musekit/admin package for the MuseKit SaaS platform.
+
+This is the LARGEST module in the system. It will be built across 2 sessions.
+This is Session 10 (Part 1). Focus on: admin layout, overview, user management,
+and metrics dashboard. Session 11 (Part 2) will add the Setup Dashboard and
+remaining features.
+
+## Tech Stack Rules
+- Next.js 14.2.18 (do NOT use 15+ or 16+ features)
+- React 18.3.1
+- Tailwind CSS v3.4.x (do NOT upgrade to v4)
+- TypeScript strict mode
+
+## What to Build in Part 1
+
+### Admin Layout (src/layout/)
+- AdminSidebar — collapsible sidebar with navigation sections
+- AdminHeader — search bar, user menu, breadcrumbs
+- AdminLayout — wrapper component combining sidebar + header + content area
+- Breadcrumb — dynamic breadcrumb navigation
+
+### Overview Page (src/pages/overview.tsx)
+- High-level metrics cards (total users, active subs, MRR)
+- Quick action cards (manage users, view logs, settings)
+- Recent activity feed
+
+### User Management (src/pages/users/)
+- UserList — table with search, filter by role/status, pagination
+- UserDetail — profile info, subscription status, activity timeline
+- TeamMembers — org members view with role management
+- AdminNotes — notes system for customer service tracking per user
+- UserImpersonation — impersonate user (30-minute sessions with audit logging)
+
+### Metrics Dashboard (src/pages/metrics.tsx)
+- 10 KPI cards: Total Users, New Users (30d), Active Subscriptions, MRR, ARPU,
+  LTV, Churn Rate, Conversion Rate, Feedback Count, Waitlist Count
+- NPS Score card with color-coded Net Promoter Score
+- User Growth line chart
+- Revenue Growth line chart
+- Configurable alert thresholds for churn rate and user growth
+- "Email Report" button (triggers KPI email via @musekit/email)
+- "Check Alerts" button (evaluates thresholds and shows results)
+
+### Audit Log Viewer (src/pages/audit-log.tsx)
+- Filterable, searchable audit log table
+- Filter by: user, action, resource type, date range
+- Expandable rows showing full metadata/payload
+
+### Dependencies
+- Install: @musekit/shared (from github:SpeckledDarth/musekit-shared)
+- Install: @musekit/database (from github:SpeckledDarth/musekit-database)
+- Install: @musekit/design-system (from github:SpeckledDarth/musekit-design-system)
+- Install: @musekit/auth (from github:SpeckledDarth/musekit-auth)
+- Install: @musekit/billing (from github:SpeckledDarth/musekit-billing)
+- Install: recharts (for charts), lucide-react (for icons)
+
+### Supabase Tables Used
+- profiles (read/write — user management)
+- organizations (read — org info)
+- team_members (read — team membership)
+- subscriptions (read — subscription status for users)
+- audit_logs (read/write — audit log viewer + impersonation logging)
+- notifications (read — notification counts for overview)
+- feedback (read — feedback count for metrics)
+- waitlist (read — waitlist count for metrics)
+
+### Environment Secrets Needed
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+- STRIPE_SECRET_KEY (for subscription lookups)
+
+### Reference Code
+Original: github.com/SpeckledDarth/master-saas-muse
+Look in: src/app/admin/, src/app/(admin)/, src/components/admin/, src/app/api/admin/
+
+### Rules
+- All UI uses @musekit/design-system components
+- Admin pages must check user role — only admin users can access
+- Export everything from src/index.ts
+- Create replit.md and MODULE.md
+- MODULE.md must list Part 2 features as "NOT YET BUILT — Session 11"
