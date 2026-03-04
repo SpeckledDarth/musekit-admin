@@ -1,0 +1,108 @@
+Continue building the @musekit/admin package. Read replit.md and MODULE.md
+to understand what this module is and what was built in Part 1.
+
+Check src/index.ts to see what has been built so far. This session adds
+the Setup Dashboard and remaining admin features.
+
+## Tech Stack Rules
+- Next.js 14.2.18 (do NOT use 15+ or 16+ features)
+- React 18.3.1
+- Tailwind CSS v3.4.x (do NOT upgrade to v4)
+- TypeScript strict mode
+
+## What to Build in Part 2
+
+### Setup Dashboard (src/pages/setup/)
+11 sub-pages with sidebar navigation:
+
+1. **Branding** (setup/branding.tsx)
+   - Logo upload (Supabase Storage), app name, description
+   - Primary color picker with live preview
+   - Hero style selector (6 styles: full-width, split, video, pattern, floating mockup, photo collage)
+   - Header config: bg color, text color, opacity slider, sticky/relative toggle, transparent mode, border toggle
+   - Footer config: bg color, text color, bg image, layout mode (4-column, minimal, centered)
+
+2. **Content** (setup/content.tsx)
+   - Homepage section list with drag-and-drop ordering
+   - Per-section background color pickers
+   - Enable/disable individual sections
+   - 14 section types (hero, logo marquee, counters, features, testimonials, process steps, FAQ, founder letter, comparison bars, screenshot showcase, bottom CTA, image collage, image+text, feature sub-pages)
+
+3. **Pages** (setup/pages.tsx)
+   - About page content editor
+   - Contact page configuration
+   - Custom pages CRUD
+   - Terms, privacy, and other legal page settings
+
+4. **Pricing** (setup/pricing.tsx)
+   - Plan editor (name, price, features list, Stripe price ID)
+   - Monthly/annual toggle
+   - Feature comparison table editor
+
+5. **Social Links** (setup/social.tsx)
+   - Social media profile URL fields (Twitter, LinkedIn, GitHub, etc.)
+
+6. **Features & Integrations** (setup/features.tsx)
+   - Auth provider toggles (Google, GitHub, Apple, Twitter/X, Magic Link, SSO)
+   - AI feature enable/disable
+   - Webhook config (URL, secret, per-event toggles)
+   - Security settings
+   - Compliance settings
+
+7. **API Keys & Integrations** (setup/api-keys.tsx)
+   - Collapsible groups (collapsed by default) with status indicators (green/red/gray dots)
+   - Required/Optional labels (Supabase, Stripe, Resend = required)
+   - Format validation on save (Stripe sk_ prefix, Supabase URL pattern, etc.)
+   - Summary cards (total keys, required keys configured)
+   - Inline edit/reveal/delete with source badges (Dashboard vs Env Var)
+
+8. **Email Templates** (setup/email.tsx)
+   - Template list with edit buttons
+   - Editor with live preview (uses @musekit/email editor component)
+   - Test email sending
+
+9. **AI/Support** (setup/ai.tsx)
+   - AI provider selector (xAI, OpenAI, Anthropic)
+   - Model, temperature, max tokens, system prompt config
+   - Help widget config: system prompt, fallback email, enable/disable
+
+10. **Security/Compliance** (setup/security.tsx)
+    - SSO/SAML config (identity providers: Okta, Azure AD, Google Workspace)
+    - MFA settings
+    - Password requirements
+
+11. **PassivePost Settings** (setup/passivepost.tsx)
+    - Social platform configuration
+    - Default posting settings
+    - Placeholder for now — full config in PassivePost module
+
+### Other Admin Features
+
+- Feature Toggles page (src/pages/feature-toggles.tsx)
+  - List all toggles with enable/disable switches
+  - Group by category
+
+- Customer Service Tools (src/pages/customer-service.tsx)
+  - Subscription tracking per user
+  - Invoice history (via Stripe)
+  - Admin notes (built in Part 1)
+
+- Onboarding Funnel Analytics (src/pages/onboarding.tsx)
+  - Signup → verification → first login → first action funnel
+
+### Additional Supabase Tables Used (beyond Part 1)
+- brand_settings (read/write — branding config)
+- feature_toggles (read/write — toggle management)
+- email_templates (read/write — template editor)
+- content_posts (read — blog/content overview)
+- api_keys (read/write — API key management)
+
+### Reference Code
+Same as Part 1: src/app/admin/, src/components/admin/, src/app/api/admin/
+
+### Rules
+- All UI uses @musekit/design-system components
+- Color pickers should use standard HTML color inputs
+- Drag-and-drop for section ordering can use a simple list with up/down buttons if drag-and-drop library is too complex
+- Update MODULE.md to mark Part 2 features as "BUILT"
+- Update src/index.ts to export all new components

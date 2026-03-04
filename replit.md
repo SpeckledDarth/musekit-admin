@@ -4,7 +4,7 @@ Admin dashboard module for the MuseKit SaaS platform.
 
 ## Project Overview
 
-This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It provides user management, metrics dashboards, audit logging, and system oversight capabilities.
+This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It provides user management, metrics dashboards, audit logging, setup configuration, feature toggles, customer service tools, and onboarding analytics.
 
 ## Tech Stack
 
@@ -22,18 +22,22 @@ This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It pr
 
 ```
 src/
-  app/                  # Next.js app directory (unused, using pages router)
   components/ui/        # Reusable UI components (Button, Card, Table, etc.)
-  hooks/                # React hooks (useAdmin)
-  layout/               # Admin layout components (Sidebar, Header, Breadcrumb)
+  hooks/                # React hooks (useAdmin, useSettings)
+  layout/               # Layout components (AdminSidebar, SetupLayout, etc.)
   lib/                  # Utilities and Supabase client
   pages/                # Next.js pages
     api/admin/          # Server-side API routes (Supabase admin operations)
+      setup/            # Setup-related API routes (settings, toggles, email, api-keys)
+    setup/              # Setup Dashboard sub-pages (11 pages)
     users/              # User management pages
     index.tsx           # Overview dashboard
     metrics.tsx         # KPI metrics dashboard
     audit-log.tsx       # Audit log viewer
-    settings.tsx        # Settings (placeholder for Session 11)
+    feature-toggles.tsx # Feature toggle management
+    customer-service.tsx # Customer service tools
+    onboarding.tsx      # Onboarding funnel analytics
+    settings.tsx        # System settings
   styles/               # Global CSS with Tailwind
   types/                # TypeScript type definitions
   index.ts              # Package exports
@@ -44,6 +48,8 @@ src/
 - **API Routes**: All Supabase admin (service role) operations go through `/api/admin/*` API routes to keep the service role key server-side only
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns
+- **Setup Settings**: Uses `brand_settings` table with `key/value` pairs; `useSettings(prefix)` hook manages load/save per prefix
+- **Sidebar**: Grouped navigation with sections (Main, Configuration, Tools, System)
 
 ### Environment Variables
 
@@ -62,6 +68,10 @@ src/
 - `notifications` - Notification data (read)
 - `feedback` - User feedback (read)
 - `waitlist` - Waitlist entries (read)
+- `brand_settings` - Key/value brand & setup settings (read/write)
+- `feature_toggles` - Feature toggle flags (read/write)
+- `email_templates` - Email templates (read/write)
+- `api_keys` - API key management (read/write)
 
 ## Running
 
@@ -80,6 +90,21 @@ npm start      # Start production server
 - Metrics Dashboard (10 KPIs, NPS, charts, alerts, email report)
 - Audit Log Viewer (filterable, searchable, expandable rows)
 
-### Part 2 (Session 11) - NOT YET BUILT
-- Setup Dashboard
-- Remaining admin features
+### Part 2 (Session 11) - COMPLETE
+- Sidebar updated with grouped sections (Main, Configuration, Tools, System)
+- Setup Dashboard with 11 sub-pages:
+  - Branding (colors, logo, hero, header, footer)
+  - Content (section ordering, visibility, bg colors)
+  - Pages (about, contact, legal, custom pages)
+  - Pricing (plans with Stripe price IDs)
+  - Social Links (8 platforms)
+  - Features & Integrations (auth providers, AI, webhooks, compliance)
+  - API Keys (grouped, reveal/hide, validation)
+  - Email Templates (editor with preview and test send)
+  - AI / Support (provider config, help widget)
+  - Security (SSO/SAML, MFA, password policies)
+  - PassivePost (social posting defaults)
+- Feature Toggles page (toggle on/off, search, add new)
+- Customer Service page (user lookup, subscription history, admin notes)
+- Onboarding Funnel page (4-stage funnel visualization)
+- API routes: settings, feature-toggles, email-templates, api-keys, customer-service, onboarding
