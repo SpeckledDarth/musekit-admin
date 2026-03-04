@@ -53,7 +53,8 @@ const keyGroups: KeyGroup[] = [
   { id: "infrastructure", label: "Infrastructure", required: false },
   { id: "automation", label: "Automation", required: false },
   { id: "security", label: "Security", required: false },
-  { id: "cdn", label: "CDN & Storage", required: false },
+  { id: "cdn", label: "CDN", required: false },
+  { id: "storage", label: "Storage", required: false },
   { id: "custom", label: "Custom", required: false },
 ];
 
@@ -111,10 +112,15 @@ const platformDefs: PlatformDef[] = [
   { id: "turnstile_secret", label: "Cloudflare Turnstile Secret Key", group: "security", required: false },
 
   { id: "cloudflare_api_token", label: "Cloudflare API Token", group: "cdn", required: false },
-  { id: "aws_s3_access_key", label: "AWS S3 Access Key", group: "cdn", required: false },
-  { id: "aws_s3_secret_key", label: "AWS S3 Secret Key", group: "cdn", required: false },
-  { id: "aws_s3_bucket", label: "AWS S3 Bucket", group: "cdn", required: false },
-  { id: "aws_s3_region", label: "AWS S3 Region", group: "cdn", required: false },
+  { id: "bunny_cdn_api_key", label: "BunnyCDN API Key", group: "cdn", required: false },
+  { id: "fastly_api_token", label: "Fastly API Token", group: "cdn", required: false },
+
+  { id: "aws_s3_access_key", label: "AWS S3 Access Key", group: "storage", required: false },
+  { id: "aws_s3_secret_key", label: "AWS S3 Secret Key", group: "storage", required: false },
+  { id: "aws_s3_bucket", label: "AWS S3 Bucket", group: "storage", required: false },
+  { id: "aws_s3_region", label: "AWS S3 Region", group: "storage", required: false },
+  { id: "cloudflare_r2_access_key", label: "Cloudflare R2 Access Key", group: "storage", required: false },
+  { id: "cloudflare_r2_secret_key", label: "Cloudflare R2 Secret Key", group: "storage", required: false },
 ];
 
 function validateKey(label: string, value: string): string | null {
