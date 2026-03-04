@@ -1,0 +1,165 @@
+MuseKit Admin Module — Gap Closure Prompt
+Target Repl: musekit-admin (isolated admin module Repl) Package: packages/admin/ Stack: React 18, TypeScript, Tailwind CSS v3, shadcn/ui components, recharts, lucide-react Pattern: All pages are "use client" components. They fetch data from /api/admin/* endpoints. UI uses components from ../components/ui/ (card, badge, avatar, skeleton, tabs, table, button, input, select, textarea). Utility functions from ../lib/utils.ts (cn, formatCurrency, formatNumber, formatDate, formatDateTime, timeAgo, getInitials).
+
+Existing Code Context
+Before starting, understand what already exists:
+
+Sidebar Navigation (layout/AdminSidebar.tsx)
+Current nav items: Overview, Users, Metrics, Audit Log, Setup Dashboard, Feature Toggles, Customer Service, Onboarding, Settings. Sections: Main, Configuration, Tools, System.
+
+Setup Sidebar (layout/SetupSidebar.tsx)
+Current sub-pages: Branding, Color Palette, Homepage, Pages, Pricing, Products, Features, Social Links, Support Config, Integrations, Compliance, Security, PassivePost.
+
+Types (types/index.ts)
+Exports: Profile, Subscription, AffiliateInfo, WaitlistEntry, FeedbackEntry, BlogPost, AuditLog, Settings, SaaSSettings (with nested branding/pricing/social/features/pages/ai/security/webhooks/passivepost), AlertThreshold.
+
+API Routes (pages/api/admin/)
+Existing: customer-service.ts, users/[id].ts, metrics.ts, onboarding.ts, plus others.
+
+Gap 1: Overview Dashboard Charts (#1) — HIGH
+File: pages/overview.tsx (or wherever the /admin overview page is) Current state: Metric cards (Total Users, Active Subs, MRR, Sessions) + recent activity feed. No charts. Required:
+
+Add recharts LineChart or AreaChart for MRR trend (last 12 months)
+Add recharts chart for user growth trend
+Add churn rate visualization
+Fetch chart data from a new or existing API endpoint
+Use ResponsiveContainer for responsive sizing
+Reference pattern: See pages/metrics.tsx which already uses recharts with LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer.
+
+Gap 2: User Health Scores (#2) — HIGH
+Files: pages/users/[id].tsx (detail view, currently 457 lines), pages/users/index.tsx (list view, currently 242 lines) Current state: User detail has activity timeline, admin notes, impersonation button. User list shows basic columns. No health scores. Required:
+
+Add a health score algorithm based on: login recency (weight: 30%), subscription status (25%), activity frequency (25%), account age (10%), profile completeness (10%)
+Display as a colored meter/badge in user detail (green ≥70, yellow 40-69, red <40)
+Add a health score column to the users list table with colored indicator
+Score should be computed client-side from existing user data or via API
+Gap 3: Team Management UI (#3) — HIGH
+File: pages/users/[id].tsx (add as a new tab) or create a new pages/team.tsx Current state: Database has org/team tables. TeamInvitationEmail exists in email package. No team UI. Required:
+
+Team section showing: organization info, current members with roles
+Invite new members with role selector (admin, editor, viewer)
+Change roles inline
+Remove members with confirmation
+Revoke pending invitations
+Could be a tab within user detail or a standalone /admin/team page
+If adding to sidebar: Add a "Team" nav item in AdminSidebar.tsx under the "Main" section.
+
+Gap 4: Revenue Dashboard (#4) — HIGH
+Files: Create new pages/revenue.tsx and pages/api/admin/revenue.ts Current state: No revenue page exists. Stripe webhooks already track payments. Affiliate payouts exist. Required:
+
+New page with: MRR card, ARR card, ARPU card
+MRR trend chart (recharts LineChart, last 12 months)
+Revenue by plan breakdown (recharts BarChart)
+Transaction history table with search and date filter
+CSV export button
+API endpoint to aggregate revenue data from Stripe/subscription records
+Sidebar: Add "Revenue" nav item to AdminSidebar.tsx in the "Main" section with DollarSign icon from lucide-react.
+
+Gap 5: Support Ticket Admin (#9) — HIGH
+File: pages/customer-service.tsx (currently 327 lines — expand it) Current state: Shows customer profiles with subscription info, admin notes, and billing history. Single-purpose page. Required:
+
+Add a Tabs component with two tabs: "Customer Profiles" (existing content) and "Support Tickets"
+Support Tickets tab: summary stat cards (Open, In Progress, Resolved, Avg Response Time), search bar, status/NPS filters, ticket list
+Ticket detail panel (click to expand): shows user message, timestamp, NPS score, admin response textarea, status dropdown (open/in-progress/resolved/closed), save button
+Expand the API at pages/api/admin/customer-service.ts to handle ticket CRUD
+Type addition: Add to types/index.ts:
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  user_email: string;
+  subject: string;
+  message: string;
+  status: 'open' | 'in_progress' | 'resolved' | 'closed';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  nps_score?: number;
+  admin_response?: string;
+  created_at: string;
+  updated_at: string;
+}
+Gap 6: Testimonials CRUD (#23) — MEDIUM
+Files: Create new pages/setup/testimonials.tsx Current state: TestimonialCarousel component exists in CMS package. No admin interface to manage testimonials. Required:
+
+Setup sub-page at path /admin/setup/testimonials
+CRUD interface: add testimonial (name, role, company, quote, avatar URL, rating), edit inline, delete with confirmation
+Reorder via drag or arrow buttons
+Approve/feature toggle per testimonial
+Summary cards: Total, Approved, Featured
+Save via settings API (persist in SaaSSettings or dedicated table)
+Sidebar: Add "Testimonials" to SetupSidebar.tsx with MessageSquare or Quote icon.
+
+Gap 7: API Keys Expansion (#22) — MEDIUM
+File: pages/setup/api-keys.tsx (currently 339 lines — expand it) Current state: Covers ~6-8 platforms (Supabase, Stripe, Resend, AI providers, Analytics basics). Required:
+
+Expand to 23+ platforms across 12 categories:
+Core: Supabase, Stripe
+Email: Resend, SendGrid, Mailgun
+OAuth: Google, GitHub, Apple, Twitter
+Social Media: Twitter/X API, Facebook, LinkedIn, Instagram
+AI: xAI, OpenAI, Anthropic, Google AI
+Analytics: Google Analytics, Plausible, Mixpanel
+Infrastructure: Sentry, Upstash Redis, Vercel
+Automation: Zapier, Make
+Security: hCaptcha, reCAPTCHA, Cloudflare Turnstile
+CDN: Cloudflare, AWS S3
+Custom: Custom API keys section
+Add search/filter functionality
+Add validation indicators (configured/not configured status)
+Group by category with collapsible sections
+Gap 8: CSS Dashboard (#14) — MEDIUM
+Files: Create new pages/setup/css-dashboard.tsx Current state: Design system package has shadcn/ui CSS variables. No interactive editor. Required:
+
+Interactive CSS variable editor with 6+ variable groups:
+Colors (background, foreground, primary, secondary, muted, accent, destructive, card, popover, border, input, ring)
+Typography (font sizes, weights, families)
+Spacing (radius values)
+Shadows
+Transitions
+Component-specific overrides
+Color picker inputs for color variables
+Live preview panel showing components with applied changes
+Light/dark mode toggle for preview
+Export CSS button (copy to clipboard)
+Save to settings API
+Sidebar: Add "CSS Dashboard" to SetupSidebar.tsx with Palette icon.
+
+Gap 9: PassivePost Config Expansion (#27) — LOWER
+File: pages/setup/passivepost.tsx (currently 160 lines — expand significantly) Current state: Basic config form with platform toggles, schedules, hashtags. Required — 5-tab configuration:
+
+Platforms tab: Per-platform settings (Twitter/X, Facebook, LinkedIn, Instagram) — API status, posting preferences, character limits, media settings
+Scheduling tab: Posting presets (daily/weekly), active days checkboxes, time windows (morning/afternoon/evening), content mix percentages
+Templates tab: 6 content templates (promotional, educational, engaging, seasonal, curated, custom), media settings (image generation toggle, default dimensions)
+AI Prompts tab: Model selection, tone/voice selector, brand voice guidelines textarea, content guardrails, negative keywords
+Analytics tab: Metrics dashboard showing engagement rates, best performing post types, engagement chart (recharts)
+Each tab saves independently. Use the existing Tabs component pattern.
+
+Gap 10: CAPTCHA Admin Config (#26) — MEDIUM
+File: pages/setup/security.tsx (currently 263 lines — expand it) Current state: MFA toggle, password policies (min length, uppercase, numbers, special chars), SSO/SAML config. Required:
+
+Add a "CAPTCHA Configuration" section with:
+Enable CAPTCHA toggle
+Provider selector: hCaptcha, reCAPTCHA v2, reCAPTCHA v3, Cloudflare Turnstile
+Site Key input field
+Secret Key input field (masked)
+Per-page toggles: enable on Login, enable on Signup, enable on Password Reset
+Test/verify button
+Save CAPTCHA settings in the security section of SaaSSettings
+Gap 11: Watermark Settings (#24) — LOWER
+File: pages/setup/branding.tsx (currently 340 lines — expand it) Current state: Full branding page with name, logo, color picker, hero styles, header/footer config. Required:
+
+Add a "Post Watermark" section at the bottom:
+Enable Watermark toggle
+Watermark Text input (e.g., "Posted via PassivePost")
+Preview showing how the watermark appears on a sample post
+"Higher tiers can disable this" note
+Save as part of branding settings
+Acceptance Criteria
+After completing all gaps:
+
+All new pages render without errors
+All expanded pages maintain existing functionality
+New sidebar links navigate correctly
+Data persists via the settings API
+UI matches the existing design language (shadcn/ui cards, Tailwind CSS v3, lucide icons)
+No new package dependencies beyond what already exists (recharts, lucide-react, etc.)
+TypeScript compiles without errors
