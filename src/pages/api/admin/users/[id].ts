@@ -6,6 +6,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const admin = await verifyAdmin(req, res);
+  if (!admin) return;
+
   const { id } = req.query;
 
   if (!id || typeof id !== "string") {
@@ -24,7 +27,7 @@ export default async function handler(
 
       const profile = profileRes.data;
 
-      const [subRes, activityRes, teamRes, notesRes] = await Promise.all([
+      const [subRes, activityRes, teamRes, notesRes, invitesRes] = await Promise.all([
         supabase
           .from("subscriptions")
           .select("*")
@@ -51,6 +54,15 @@ export default async function handler(
           .eq("resource_id", id)
           .order("created_at", { ascending: false })
           .limit(50),
+        profile?.organization_id
+          ? supabase
+              .from("team_invites")
+              .select("*")
+              .eq("organization_id", profile.organization_id)
+              .eq("status", "pending")
+              .order("created_at", { ascending: false })
+              .limit(50)
+          : Promise.resolve({ data: [] }),
       ]);
 
       res.status(200).json({
@@ -59,6 +71,7 @@ export default async function handler(
           subRes.data && subRes.data.length > 0 ? subRes.data[0] : null,
         activity: activityRes.data || [],
         teamMembers: teamRes.data || [],
+        pendingInvites: invitesRes.data || [],
         notes: (notesRes.data || []).map(
           (log: Record<string, unknown>) => ({
             id: log.id,
@@ -74,7 +87,7 @@ export default async function handler(
       const admin = await verifyAdmin(req, res);
       if (!admin) return;
 
-      const { action, note } = req.body;
+      const { action, note, email, role, memberId, inviteId } = req.body;
 
       if (action === "add_note") {
         await supabase.from("audit_logs").insert({
@@ -98,6 +111,99 @@ export default async function handler(
             session_duration_minutes: 30,
           },
         });
+        res.status(200).json({ success: true });
+      } else if (action === "invite_member") {
+        if (!email || !role) {
+          return res.status(400).json({ error: "Email and role are required" });
+        }
+
+        const profileRes = await supabase
+          .from("profiles")
+          .select("id, organization_id")
+          .eq("id", id)
+          .single();
+
+        const orgId = profileRes.data?.organization_id;
+
+        const inviteData = {
+          id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+          organization_id: orgId || id,
+          email,
+          role,
+          status: "pending",
+          invited_by: admin.userId,
+          created_at: new Date().toISOString(),
+        };
+
+        if (orgId) {
+          await supabase.from("team_invites").insert(inviteData);
+        }
+
+        await supabase.from("audit_logs").insert({
+          user_id: admin.userId,
+          action: "team_member_invited",
+          resource_type: "team_invite",
+          resource_id: id,
+          metadata: { email, role, organization_id: orgId },
+        });
+
+        res.status(200).json({ success: true, inviteId: inviteData.id });
+      } else if (action === "change_role") {
+        if (!memberId || !role) {
+          return res.status(400).json({ error: "Member ID and role are required" });
+        }
+
+        await supabase
+          .from("team_members")
+          .update({ role })
+          .eq("id", memberId);
+
+        await supabase.from("audit_logs").insert({
+          user_id: admin.userId,
+          action: "team_member_role_changed",
+          resource_type: "team_member",
+          resource_id: memberId,
+          metadata: { new_role: role, target_user_id: id },
+        });
+
+        res.status(200).json({ success: true });
+      } else if (action === "remove_member") {
+        if (!memberId) {
+          return res.status(400).json({ error: "Member ID is required" });
+        }
+
+        await supabase
+          .from("team_members")
+          .delete()
+          .eq("id", memberId);
+
+        await supabase.from("audit_logs").insert({
+          user_id: admin.userId,
+          action: "team_member_removed",
+          resource_type: "team_member",
+          resource_id: memberId,
+          metadata: { target_user_id: id },
+        });
+
+        res.status(200).json({ success: true });
+      } else if (action === "revoke_invite") {
+        if (!inviteId) {
+          return res.status(400).json({ error: "Invite ID is required" });
+        }
+
+        await supabase
+          .from("team_invites")
+          .delete()
+          .eq("id", inviteId);
+
+        await supabase.from("audit_logs").insert({
+          user_id: admin.userId,
+          action: "team_invite_revoked",
+          resource_type: "team_invite",
+          resource_id: inviteId,
+          metadata: { target_user_id: id },
+        });
+
         res.status(200).json({ success: true });
       } else {
         res.status(400).json({ error: "Unknown action" });

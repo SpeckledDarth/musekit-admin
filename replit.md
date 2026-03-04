@@ -4,7 +4,7 @@ Admin dashboard module for the MuseKit SaaS platform.
 
 ## Project Overview
 
-This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It provides user management, metrics dashboards, audit logging, setup configuration, feature toggles, customer service tools, and onboarding analytics.
+This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It provides user management, metrics dashboards, audit logging, setup configuration, feature toggles, customer service tools, revenue analytics, and onboarding funnel tracking.
 
 ## Tech Stack
 
@@ -29,27 +29,31 @@ src/
   pages/                # Next.js pages
     api/admin/          # Server-side API routes (Supabase admin operations)
       setup/            # Setup-related API routes (settings, toggles, email, api-keys)
-    setup/              # Setup Dashboard sub-pages (11 pages)
-    users/              # User management pages
-    index.tsx           # Overview dashboard
+    setup/              # Setup Dashboard sub-pages (13 pages)
+    users/              # User management pages (list + detail with health scores + team mgmt)
+    index.tsx           # Overview dashboard with charts
     metrics.tsx         # KPI metrics dashboard
     audit-log.tsx       # Audit log viewer
+    revenue.tsx         # Revenue dashboard with MRR/ARR charts
     feature-toggles.tsx # Feature toggle management
-    customer-service.tsx # Customer service tools
+    customer-service.tsx # Customer service + support tickets
     onboarding.tsx      # Onboarding funnel analytics
     settings.tsx        # System settings
   styles/               # Global CSS with Tailwind
   types/                # TypeScript type definitions
   index.ts              # Package exports
+docs/                   # Sprint plans and documentation
 ```
 
 ### Key Patterns
 
 - **API Routes**: All Supabase admin (service role) operations go through `/api/admin/*` API routes to keep the service role key server-side only
+- **Admin Auth**: All API routes use `verifyAdmin()` middleware from `src/lib/admin-auth.ts`
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns
 - **Setup Settings**: Uses `brand_settings` table with `key/value` pairs; `useSettings(prefix)` hook manages load/save per prefix
 - **Sidebar**: Grouped navigation with sections (Main, Configuration, Tools, System)
+- **Health Scores**: Client-side computed from login recency, subscription, activity, account age, profile completeness
 
 ### Environment Variables
 
@@ -62,7 +66,8 @@ src/
 
 - `profiles` - User profiles (read/write)
 - `organizations` - Organization data (read)
-- `team_members` - Team membership (read)
+- `team_members` - Team membership (read/write)
+- `team_invites` - Pending team invitations (read/write)
 - `subscriptions` - Subscription status (read)
 - `audit_logs` - Audit log entries (read/write)
 - `notifications` - Notification data (read)
@@ -72,6 +77,7 @@ src/
 - `feature_toggles` - Feature toggle flags (read/write)
 - `email_templates` - Email templates (read/write)
 - `api_keys` - API key management (read/write)
+- `support_tickets` - Customer support tickets (read/write)
 
 ## Running
 
@@ -92,19 +98,21 @@ npm start      # Start production server
 
 ### Part 2 (Session 11) - COMPLETE
 - Sidebar updated with grouped sections (Main, Configuration, Tools, System)
-- Setup Dashboard with 11 sub-pages:
-  - Branding (colors, logo, hero, header, footer)
-  - Content (section ordering, visibility, bg colors)
-  - Pages (about, contact, legal, custom pages)
-  - Pricing (plans with Stripe price IDs)
-  - Social Links (8 platforms)
-  - Features & Integrations (auth providers, AI, webhooks, compliance)
-  - API Keys (grouped, reveal/hide, validation)
-  - Email Templates (editor with preview and test send)
-  - AI / Support (provider config, help widget)
-  - Security (SSO/SAML, MFA, password policies)
-  - PassivePost (social posting defaults)
-- Feature Toggles page (toggle on/off, search, add new)
-- Customer Service page (user lookup, subscription history, admin notes)
-- Onboarding Funnel page (4-stage funnel visualization)
-- API routes: settings, feature-toggles, email-templates, api-keys, customer-service, onboarding
+- Setup Dashboard with 11 sub-pages (branding, content, pages, pricing, social, features, api-keys, email, ai, security, passivepost)
+- Feature Toggles, Customer Service, Onboarding Funnel pages
+- API routes with verifyAdmin security
+
+### Part 3 — Gap Closure (Session 12) - COMPLETE
+All 11 gaps closed across 6 sprints:
+
+- **Gap 1**: Overview dashboard charts (MRR trend AreaChart, user growth LineChart, churn BarChart)
+- **Gap 2**: User health scores (color-coded in both list and detail views)
+- **Gap 3**: Team management UI (invite, change roles, remove members, revoke invites)
+- **Gap 4**: Revenue dashboard (MRR/ARR/ARPU cards, trend charts, transaction table, CSV export)
+- **Gap 5**: Support ticket admin (tabbed customer service with ticket CRUD)
+- **Gap 6**: Testimonials CRUD setup page (add/edit/delete/reorder/approve/feature)
+- **Gap 7**: API keys expanded to 47 platforms across 11 categories with search
+- **Gap 8**: CSS dashboard (interactive variable editor, live preview, light/dark toggle, export)
+- **Gap 9**: PassivePost expanded to 5-tab config (platforms, scheduling, templates, AI prompts, analytics)
+- **Gap 10**: CAPTCHA admin config (provider selector, keys, per-page toggles, test button)
+- **Gap 11**: Watermark settings in branding page (toggle, text, preview)

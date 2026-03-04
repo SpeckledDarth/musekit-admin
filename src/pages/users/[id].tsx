@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/table";
 import { formatDate, timeAgo } from "@/lib/utils";
 import { useAdmin } from "@/hooks/useAdmin";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   ArrowLeft,
   Mail,
@@ -30,6 +32,9 @@ import {
   StickyNote,
   Clock,
   AlertTriangle,
+  UserPlus,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import type {
   Profile,
@@ -38,6 +43,59 @@ import type {
   TeamMember,
   AdminNote,
 } from "@/types";
+
+function computeHealthScore(
+  profile: Profile | null,
+  subscription: Subscription | null,
+  activityCount: number
+): number {
+  if (!profile) return 0;
+
+  let score = 0;
+
+  const now = Date.now();
+  if (profile.last_sign_in_at) {
+    const daysSinceLogin = (now - new Date(profile.last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24);
+    if (daysSinceLogin <= 1) score += 30;
+    else if (daysSinceLogin <= 7) score += 24;
+    else if (daysSinceLogin <= 14) score += 18;
+    else if (daysSinceLogin <= 30) score += 12;
+    else if (daysSinceLogin <= 90) score += 6;
+  }
+
+  if (subscription) {
+    if (subscription.status === "active") score += 25;
+    else if (subscription.status === "trialing") score += 20;
+    else if (subscription.status === "past_due") score += 10;
+    else if (subscription.status === "canceled") score += 5;
+  }
+
+  if (activityCount >= 50) score += 25;
+  else if (activityCount >= 20) score += 20;
+  else if (activityCount >= 10) score += 15;
+  else if (activityCount >= 5) score += 10;
+  else if (activityCount >= 1) score += 5;
+
+  const accountAgeDays = (now - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24);
+  if (accountAgeDays >= 365) score += 10;
+  else if (accountAgeDays >= 180) score += 8;
+  else if (accountAgeDays >= 90) score += 6;
+  else if (accountAgeDays >= 30) score += 4;
+  else score += 2;
+
+  let completeness = 0;
+  if (profile.full_name) completeness += 5;
+  if (profile.avatar_url) completeness += 5;
+  score += completeness;
+
+  return Math.min(100, Math.max(0, score));
+}
+
+function getHealthColor(score: number): { bg: string; text: string; label: string } {
+  if (score >= 70) return { bg: "bg-green-100", text: "text-green-800", label: "Healthy" };
+  if (score >= 40) return { bg: "bg-yellow-100", text: "text-yellow-800", label: "At Risk" };
+  return { bg: "bg-red-100", text: "text-red-800", label: "Critical" };
+}
 
 export default function UserDetailPage() {
   const router = useRouter();
@@ -52,6 +110,9 @@ export default function UserDetailPage() {
   const [loading, setLoading] = useState(true);
   const [impersonating, setImpersonating] = useState(false);
   const [impersonateCountdown, setImpersonateCountdown] = useState(0);
+  const [pendingInvites, setPendingInvites] = useState<Array<{ id: string; email: string; role: string; created_at: string }>>([]);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState("viewer");
 
   useEffect(() => {
     if (!id || typeof id !== "string") return;
@@ -65,6 +126,7 @@ export default function UserDetailPage() {
         setSubscription(data.subscription);
         setActivity(data.activity || []);
         setTeamMembers(data.teamMembers || []);
+        setPendingInvites(data.pendingInvites || []);
         setNotes(data.notes || []);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -135,6 +197,71 @@ export default function UserDetailPage() {
       }, 1000);
     } catch (error) {
       console.error("Error starting impersonation:", error);
+    }
+  };
+
+  const handleInviteMember = async () => {
+    if (!inviteEmail.trim() || !id) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "invite_member", email: inviteEmail.trim(), role: inviteRole }),
+      });
+      if (!res.ok) throw new Error("Failed to invite");
+      const data = await res.json();
+      setPendingInvites([
+        ...pendingInvites,
+        { id: data.inviteId || Date.now().toString(), email: inviteEmail.trim(), role: inviteRole, created_at: new Date().toISOString() },
+      ]);
+      setInviteEmail("");
+      setInviteRole("viewer");
+    } catch (error) {
+      console.error("Error inviting member:", error);
+    }
+  };
+
+  const handleChangeRole = async (memberId: string, newRole: string) => {
+    if (!id) return;
+    try {
+      await fetch(`/api/admin/users/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "change_role", memberId, role: newRole }),
+      });
+      setTeamMembers(teamMembers.map((m) => (m.id === memberId ? { ...m, role: newRole as TeamMember["role"] } : m)));
+    } catch (error) {
+      console.error("Error changing role:", error);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string) => {
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to remove this team member?")) return;
+    try {
+      await fetch(`/api/admin/users/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "remove_member", memberId }),
+      });
+      setTeamMembers(teamMembers.filter((m) => m.id !== memberId));
+    } catch (error) {
+      console.error("Error removing member:", error);
+    }
+  };
+
+  const handleRevokeInvite = async (inviteId: string) => {
+    if (!id) return;
+    if (!window.confirm("Are you sure you want to revoke this invitation?")) return;
+    try {
+      await fetch(`/api/admin/users/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke_invite", inviteId }),
+      });
+      setPendingInvites(pendingInvites.filter((inv) => inv.id !== inviteId));
+    } catch (error) {
+      console.error("Error revoking invite:", error);
     }
   };
 
@@ -213,6 +340,29 @@ export default function UserDetailPage() {
                   {profile.status}
                 </Badge>
               </div>
+              {(() => {
+                const healthScore = computeHealthScore(profile, subscription, activity.length);
+                const health = getHealthColor(healthScore);
+                return (
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-sm font-medium">Health Score</span>
+                      <Badge className={`${health.bg} ${health.text} border-transparent`}>
+                        {healthScore} — {health.label}
+                      </Badge>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full transition-all ${
+                          healthScore >= 70 ? "bg-green-500" : healthScore >= 40 ? "bg-yellow-500" : "bg-red-500"
+                        }`}
+                        style={{ width: `${healthScore}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <p className="flex items-center justify-center gap-1">
                   <Calendar className="h-3 w-3" /> Joined{" "}
@@ -362,45 +512,137 @@ export default function UserDetailPage() {
               </TabsContent>
 
               <TabsContent value="team">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Team Members</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {teamMembers.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        No team members found.
-                      </p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Member</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Joined</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {teamMembers.map((member) => (
-                            <TableRow key={member.id}>
-                              <TableCell>
-                                {member.profile?.full_name ||
-                                  member.profile?.email ||
-                                  member.user_id}
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline">{member.role}</Badge>
-                              </TableCell>
-                              <TableCell>
-                                {formatDate(member.joined_at)}
-                              </TableCell>
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <UserPlus className="h-5 w-5" /> Invite Member
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex gap-2">
+                        <Input
+                          type="email"
+                          placeholder="Email address"
+                          value={inviteEmail}
+                          onChange={(e) => setInviteEmail(e.target.value)}
+                          className="flex-1"
+                        />
+                        <Select
+                          value={inviteRole}
+                          onChange={(e) => setInviteRole(e.target.value)}
+                          className="w-32"
+                        >
+                          <option value="admin">Admin</option>
+                          <option value="editor">Editor</option>
+                          <option value="viewer">Viewer</option>
+                        </Select>
+                        <Button onClick={handleInviteMember} disabled={!inviteEmail.trim()}>
+                          <UserPlus className="h-4 w-4 mr-1" /> Invite
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-lg">Team Members</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {teamMembers.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">
+                          No team members found.
+                        </p>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Member</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Joined</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
+                          </TableHeader>
+                          <TableBody>
+                            {teamMembers.map((member) => (
+                              <TableRow key={member.id}>
+                                <TableCell>
+                                  {member.profile?.full_name ||
+                                    member.profile?.email ||
+                                    member.user_id}
+                                </TableCell>
+                                <TableCell>
+                                  <Select
+                                    value={member.role}
+                                    onChange={(e) => handleChangeRole(member.id, e.target.value)}
+                                    className="w-28 h-8 text-xs"
+                                  >
+                                    <option value="owner">Owner</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="member">Member</option>
+                                    <option value="viewer">Viewer</option>
+                                  </Select>
+                                </TableCell>
+                                <TableCell>
+                                  {formatDate(member.joined_at)}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => handleRemoveMember(member.id)}
+                                  >
+                                    <Trash2 className="h-3 w-3 mr-1" /> Remove
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {pendingInvites.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-lg">Pending Invitations</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Invited</TableHead>
+                              <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {pendingInvites.map((invite) => (
+                              <TableRow key={invite.id}>
+                                <TableCell>{invite.email}</TableCell>
+                                <TableCell>
+                                  <Badge variant="outline">{invite.role}</Badge>
+                                </TableCell>
+                                <TableCell>{formatDate(invite.created_at)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleRevokeInvite(invite.id)}
+                                  >
+                                    <XCircle className="h-3 w-3 mr-1" /> Revoke
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="notes">

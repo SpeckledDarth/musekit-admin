@@ -16,6 +16,8 @@ import {
   Bot,
   ShieldCheck,
   Megaphone,
+  MessageSquare,
+  Palette,
 } from "lucide-react";
 
 const setupNavItems = [
@@ -29,6 +31,8 @@ const setupNavItems = [
   { label: "Email Templates", href: "/setup/email", icon: Mail },
   { label: "AI / Support", href: "/setup/ai", icon: Bot },
   { label: "Security", href: "/setup/security", icon: ShieldCheck },
+  { label: "Testimonials", href: "/setup/testimonials", icon: MessageSquare },
+  { label: "CSS Dashboard", href: "/setup/css-dashboard", icon: Palette },
   { label: "PassivePost", href: "/setup/passivepost", icon: Megaphone },
 ];
 

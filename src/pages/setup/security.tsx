@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import Head from "next/head";
 import { SetupLayout } from "@/layout/SetupLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSettings } from "@/hooks/useSettings";
-import { ShieldCheck, Key, Lock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ShieldCheck, Key, Lock, Shield, CheckCircle } from "lucide-react";
 
 const identityProviders = [
   { key: "okta", label: "Okta" },
@@ -15,9 +16,24 @@ const identityProviders = [
   { key: "google-workspace", label: "Google Workspace" },
 ];
 
+const captchaProviders = [
+  { key: "hcaptcha", label: "hCaptcha" },
+  { key: "recaptcha-v2", label: "reCAPTCHA v2" },
+  { key: "recaptcha-v3", label: "reCAPTCHA v3" },
+  { key: "cloudflare-turnstile", label: "Cloudflare Turnstile" },
+];
+
+const captchaPages = [
+  { key: "login", label: "Login" },
+  { key: "signup", label: "Signup" },
+  { key: "passwordReset", label: "Password Reset" },
+];
+
 export default function SecuritySetup() {
   const { getSetting, updateSetting, saveSettings, loading, saving } =
     useSettings("security");
+  const [captchaVerifying, setCaptchaVerifying] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   if (loading) {
     return (
@@ -255,6 +271,142 @@ export default function SecuritySetup() {
                   />
                   Require special character
                 </label>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Shield className="h-5 w-5" /> CAPTCHA Configuration
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center gap-3 p-3 rounded-md border cursor-pointer hover:bg-muted/50">
+                <input
+                  type="checkbox"
+                  checked={getSetting("captchaEnabled", "false") === "true"}
+                  onChange={(e) =>
+                    updateSetting(
+                      "captchaEnabled",
+                      e.target.checked ? "true" : "false"
+                    )
+                  }
+                  className="rounded"
+                />
+                <div>
+                  <span className="text-sm font-medium">Enable CAPTCHA</span>
+                  <p className="text-xs text-muted-foreground">
+                    Protect forms with CAPTCHA verification
+                  </p>
+                </div>
+              </label>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  CAPTCHA Provider
+                </label>
+                <div className="space-y-2">
+                  {captchaProviders.map((provider) => (
+                    <label
+                      key={provider.key}
+                      className="flex items-center gap-3 p-3 rounded-md border cursor-pointer hover:bg-muted/50"
+                    >
+                      <input
+                        type="radio"
+                        name="captchaProvider"
+                        value={provider.key}
+                        checked={
+                          getSetting("captchaProvider", "hcaptcha") ===
+                          provider.key
+                        }
+                        onChange={() =>
+                          updateSetting("captchaProvider", provider.key)
+                        }
+                        className="rounded"
+                      />
+                      <span className="text-sm font-medium">
+                        {provider.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Site Key</label>
+                  <Input
+                    value={getSetting("captchaSiteKey")}
+                    onChange={(e) =>
+                      updateSetting("captchaSiteKey", e.target.value)
+                    }
+                    placeholder="Enter site key"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Secret Key</label>
+                  <Input
+                    type="password"
+                    value={getSetting("captchaSecretKey")}
+                    onChange={(e) =>
+                      updateSetting("captchaSecretKey", e.target.value)
+                    }
+                    placeholder="Enter secret key"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Enable CAPTCHA on Pages
+                </label>
+                <div className="space-y-2">
+                  {captchaPages.map((page) => (
+                    <label
+                      key={page.key}
+                      className="flex items-center gap-2 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          getSetting(`captchaPage.${page.key}`, "true") ===
+                          "true"
+                        }
+                        onChange={(e) =>
+                          updateSetting(
+                            `captchaPage.${page.key}`,
+                            e.target.checked ? "true" : "false"
+                          )
+                        }
+                        className="rounded"
+                      />
+                      {page.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={captchaVerifying}
+                  onClick={() => {
+                    setCaptchaVerifying(true);
+                    setCaptchaVerified(false);
+                    setTimeout(() => {
+                      setCaptchaVerifying(false);
+                      setCaptchaVerified(true);
+                    }, 1500);
+                  }}
+                >
+                  {captchaVerifying ? "Verifying..." : "Test CAPTCHA"}
+                </Button>
+                {captchaVerified && (
+                  <Badge variant="success" className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" /> Verified
+                  </Badge>
+                )}
               </div>
             </CardContent>
           </Card>

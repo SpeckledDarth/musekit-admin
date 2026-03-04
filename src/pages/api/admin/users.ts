@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
+import { verifyAdmin } from "@/lib/admin-auth";
 
 const PAGE_SIZE = 20;
 
@@ -7,6 +8,9 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
 ) {
+  const admin = await verifyAdmin(req, res);
+  if (!admin) return;
+
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }

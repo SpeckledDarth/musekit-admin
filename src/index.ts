@@ -23,4 +23,5 @@ export type {
   AdminNote,
   MetricCard,
   AlertThreshold,
+  SupportTicket,
 } from "./types";

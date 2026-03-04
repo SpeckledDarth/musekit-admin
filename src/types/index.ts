@@ -102,3 +102,17 @@ export interface AlertThreshold {
   value: number;
   enabled: boolean;
 }
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  user_email: string;
+  subject: string;
+  message: string;
+  status: "open" | "in_progress" | "resolved" | "closed";
+  priority: "low" | "medium" | "high" | "urgent";
+  nps_score?: number;
+  admin_response?: string;
+  created_at: string;
+  updated_at: string;
+}

@@ -17,6 +17,7 @@ import {
   ToggleLeft,
   HeadsetIcon,
   TrendingUp,
+  DollarSign,
 } from "lucide-react";
 
 interface NavItem {
@@ -31,6 +32,7 @@ const navItems: NavItem[] = [
   { label: "Users", href: "/users", icon: Users, section: "Main" },
   { label: "Metrics", href: "/metrics", icon: BarChart3, section: "Main" },
   { label: "Audit Log", href: "/audit-log", icon: ScrollText, section: "Main" },
+  { label: "Revenue", href: "/revenue", icon: DollarSign, section: "Main" },
   { label: "Setup Dashboard", href: "/setup", icon: Sliders, section: "Configuration" },
   { label: "Feature Toggles", href: "/feature-toggles", icon: ToggleLeft, section: "Configuration" },
   { label: "Customer Service", href: "/customer-service", icon: HeadsetIcon, section: "Tools" },

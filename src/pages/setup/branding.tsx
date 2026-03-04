@@ -8,7 +8,7 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useSettings } from "@/hooks/useSettings";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Paintbrush, Upload, Eye } from "lucide-react";
+import { Paintbrush, Upload, Eye, Info } from "lucide-react";
 
 const heroStyles = [
   "full-width",
@@ -332,6 +332,66 @@ export default function BrandingPage() {
                     </option>
                   ))}
                 </Select>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Post Watermark</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={getSetting("watermarkEnabled", "true") === "true"}
+                  onChange={(e) =>
+                    updateSetting(
+                      "watermarkEnabled",
+                      e.target.checked ? "true" : "false"
+                    )
+                  }
+                  className="rounded"
+                />
+                Enable Watermark
+              </label>
+              <div>
+                <label className="text-sm font-medium">Watermark Text</label>
+                <Input
+                  value={getSetting("watermarkText", "Posted via PassivePost")}
+                  onChange={(e) =>
+                    updateSetting("watermarkText", e.target.value)
+                  }
+                  placeholder="Posted via PassivePost"
+                  disabled={getSetting("watermarkEnabled", "true") !== "true"}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Preview</label>
+                <div className="rounded-lg border bg-white p-4 max-w-sm">
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className="h-10 w-10 rounded-full bg-gray-200" />
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">Your Brand</p>
+                      <p className="text-xs text-gray-500">Just now</p>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-700 mb-3">
+                    This is an example social media post to show how the watermark will appear at the bottom of your posts.
+                  </p>
+                  <div className="h-32 rounded-md bg-gray-100 mb-3" />
+                  {getSetting("watermarkEnabled", "true") === "true" && (
+                    <p className="text-xs text-gray-400 border-t pt-2">
+                      {getSetting("watermarkText", "Posted via PassivePost")}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-start gap-2 text-muted-foreground">
+                <Info className="h-4 w-4 mt-0.5 shrink-0" />
+                <p className="text-xs">
+                  Higher-tier plans can disable watermarks.
+                </p>
               </div>
             </CardContent>
           </Card>

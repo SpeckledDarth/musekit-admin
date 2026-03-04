@@ -14,13 +14,36 @@ import {
   ScrollText,
   Settings,
 } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+} from "recharts";
 import type { AuditLog } from "@/types";
+
+interface ChartDataPoint {
+  month: string;
+  mrr?: number;
+  users?: number;
+  rate?: number;
+}
 
 interface OverviewMetrics {
   totalUsers: number;
   activeSubscriptions: number;
   mrr: number;
   recentActivity: AuditLog[];
+  mrrTrend: ChartDataPoint[];
+  userGrowth: ChartDataPoint[];
+  churnData: ChartDataPoint[];
 }
 
 export default function OverviewPage() {
@@ -41,6 +64,9 @@ export default function OverviewPage() {
           activeSubscriptions: 0,
           mrr: 0,
           recentActivity: [],
+          mrrTrend: [],
+          userGrowth: [],
+          churnData: [],
         });
       } finally {
         setLoading(false);
@@ -142,6 +168,107 @@ export default function OverviewPage() {
             </Card>
           ))}
         </div>
+
+        {loading ? (
+          <div className="grid gap-6 lg:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader>
+                  <Skeleton className="h-5 w-32" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-[250px] w-full" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="grid gap-6 lg:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">MRR Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metrics?.mrrTrend || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" fontSize={12} />
+                      <YAxis fontSize={12} />
+                      <Tooltip
+                        formatter={(value: number) => [
+                          formatCurrency(value),
+                          "MRR",
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="mrr"
+                        stroke="hsl(262, 83%, 58%)"
+                        fill="hsl(262, 83%, 58%)"
+                        fillOpacity={0.2}
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">User Growth</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={metrics?.userGrowth || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" fontSize={12} />
+                      <YAxis fontSize={12} />
+                      <Tooltip />
+                      <Line
+                        type="monotone"
+                        dataKey="users"
+                        stroke="hsl(221.2, 83.2%, 53.3%)"
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Churn Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={metrics?.churnData || []}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" fontSize={12} />
+                      <YAxis fontSize={12} unit="%" />
+                      <Tooltip
+                        formatter={(value: number) => [
+                          `${value}%`,
+                          "Churn Rate",
+                        ]}
+                      />
+                      <Bar
+                        dataKey="rate"
+                        fill="hsl(0, 84%, 60%)"
+                        radius={[4, 4, 0, 0]}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div className="grid gap-6 md:grid-cols-3">
           {quickActions.map((action) => (
