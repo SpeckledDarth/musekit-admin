@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import Head from "next/head";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatDateTime } from "@/lib/utils";
+import { formatDateTime, timeAgo } from "@/lib/utils";
+import { downloadCSV } from "@/lib/csv-export";
 import {
   Search,
   ChevronDown,
@@ -23,10 +24,27 @@ import {
   ChevronRight,
   Filter,
   ScrollText,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Download,
 } from "lucide-react";
 import type { AuditLog } from "@/types";
 
 const PAGE_SIZE = 25;
+
+type SortColumn = "action" | "resource_type" | "user_id" | "ip_address" | "created_at";
+type SortDirection = "asc" | "desc" | null;
+
+const CSV_COLUMNS: { key: keyof AuditLog; label: string }[] = [
+  { key: "id", label: "ID" },
+  { key: "action", label: "Action" },
+  { key: "resource_type", label: "Resource Type" },
+  { key: "resource_id", label: "Resource ID" },
+  { key: "user_id", label: "User ID" },
+  { key: "ip_address", label: "IP Address" },
+  { key: "created_at", label: "Created At" },
+];
 
 export default function AuditLogPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
@@ -41,6 +59,15 @@ export default function AuditLogPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [actions, setActions] = useState<string[]>([]);
   const [resourceTypes, setResourceTypes] = useState<string[]>([]);
+  const [sortColumn, setSortColumn] = useState<SortColumn | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+
+  const isFiltered =
+    search !== "" ||
+    actionFilter !== "all" ||
+    resourceFilter !== "all" ||
+    dateFrom !== "" ||
+    dateTo !== "";
 
   useEffect(() => {
     async function fetchFilters() {
@@ -90,11 +117,47 @@ export default function AuditLogPage() {
     setPage(0);
   }, [search, actionFilter, resourceFilter, dateFrom, dateTo]);
 
+  const handleSort = (column: SortColumn) => {
+    if (sortColumn !== column) {
+      setSortColumn(column);
+      setSortDirection("asc");
+    } else if (sortDirection === "asc") {
+      setSortDirection("desc");
+    } else {
+      setSortColumn(null);
+      setSortDirection(null);
+    }
+  };
+
+  const getSortIcon = (column: SortColumn) => {
+    if (sortColumn !== column) return <ArrowUpDown className="h-4 w-4 ml-1 inline" />;
+    if (sortDirection === "asc") return <ArrowUp className="h-4 w-4 ml-1 inline" />;
+    return <ArrowDown className="h-4 w-4 ml-1 inline" />;
+  };
+
+  const sortedLogs = useMemo(() => {
+    if (!sortColumn || !sortDirection) return logs;
+    return [...logs].sort((a, b) => {
+      const aVal = a[sortColumn] ?? "";
+      const bVal = b[sortColumn] ?? "";
+      const cmp = String(aVal).localeCompare(String(bVal));
+      return sortDirection === "asc" ? cmp : -cmp;
+    });
+  }, [logs, sortColumn, sortDirection]);
+
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
   const toggleRow = (id: string) => {
     setExpandedRow(expandedRow === id ? null : id);
   };
+
+  const handleExportCSV = () => {
+    downloadCSV(logs, "audit-log", CSV_COLUMNS);
+  };
+
+  const titleText = isFiltered && logs.length !== totalCount
+    ? `Audit Log (${logs.length} of ${totalCount})`
+    : `Audit Log (${totalCount})`;
 
   return (
     <>
@@ -103,11 +166,17 @@ export default function AuditLogPage() {
       </Head>
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Audit Log</h1>
-          <p className="text-muted-foreground">
-            View system activity and event history.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">{titleText}</h1>
+            <p className="text-muted-foreground">
+              View system activity and event history.
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         <Card>
@@ -184,15 +253,25 @@ export default function AuditLogPage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-8"></TableHead>
-                      <TableHead>Action</TableHead>
-                      <TableHead>Resource</TableHead>
-                      <TableHead>User ID</TableHead>
-                      <TableHead>IP Address</TableHead>
-                      <TableHead>Timestamp</TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("action")}>
+                        Action {getSortIcon("action")}
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("resource_type")}>
+                        Resource {getSortIcon("resource_type")}
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("user_id")}>
+                        User ID {getSortIcon("user_id")}
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("ip_address")}>
+                        IP Address {getSortIcon("ip_address")}
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => handleSort("created_at")}>
+                        Timestamp {getSortIcon("created_at")}
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {logs.length === 0 ? (
+                    {sortedLogs.length === 0 ? (
                       <TableRow>
                         <TableCell
                           colSpan={6}
@@ -205,7 +284,7 @@ export default function AuditLogPage() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      logs.map((log) => (
+                      sortedLogs.map((log) => (
                         <React.Fragment key={log.id}>
                           <TableRow
                             className="cursor-pointer"
@@ -240,8 +319,8 @@ export default function AuditLogPage() {
                             <TableCell className="text-sm">
                               {log.ip_address || "\u2014"}
                             </TableCell>
-                            <TableCell className="text-sm">
-                              {formatDateTime(log.created_at)}
+                            <TableCell className="text-sm" title={formatDateTime(log.created_at)}>
+                              {timeAgo(log.created_at)}
                             </TableCell>
                           </TableRow>
                           {expandedRow === log.id && (

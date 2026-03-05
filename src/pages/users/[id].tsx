@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -21,6 +21,11 @@ import { formatDate, timeAgo } from "@/lib/utils";
 import { useAdmin } from "@/hooks/useAdmin";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
+import { toast } from "sonner";
+import { Breadcrumb } from "@/layout/Breadcrumb";
 import {
   ArrowLeft,
   Mail,
@@ -35,6 +40,11 @@ import {
   UserPlus,
   Trash2,
   XCircle,
+  Edit2,
+  Save,
+  X,
+  Ban,
+  UserX,
 } from "lucide-react";
 import type {
   Profile,
@@ -97,6 +107,13 @@ function getHealthColor(score: number): { bg: string; text: string; label: strin
   return { bg: "bg-red-100", text: "text-red-800", label: "Critical" };
 }
 
+interface EditForm {
+  full_name: string;
+  email: string;
+  role: string;
+  status: string;
+}
+
 export default function UserDetailPage() {
   const params = useParams();
   const id = params?.id as string | undefined;
@@ -114,6 +131,18 @@ export default function UserDetailPage() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("viewer");
 
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>({ full_name: "", email: "", role: "", status: "" });
+  const [saving, setSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null);
+  const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  useUnsavedChanges(isDirty);
+
   useEffect(() => {
     if (!id || typeof id !== "string") return;
 
@@ -130,6 +159,7 @@ export default function UserDetailPage() {
         setNotes(data.notes || []);
       } catch (error) {
         console.error("Error fetching user data:", error);
+        toast.error("Failed to load user data");
       } finally {
         setLoading(false);
       }
@@ -137,6 +167,97 @@ export default function UserDetailPage() {
 
     fetchUserData();
   }, [id]);
+
+  const startEditing = useCallback(() => {
+    if (!profile) return;
+    setEditForm({
+      full_name: profile.full_name || "",
+      email: profile.email,
+      role: profile.role,
+      status: profile.status,
+    });
+    setEditing(true);
+    setIsDirty(false);
+  }, [profile]);
+
+  const cancelEditing = useCallback(() => {
+    setEditing(false);
+    setIsDirty(false);
+  }, []);
+
+  const handleEditChange = useCallback((field: keyof EditForm, value: string) => {
+    setEditForm((prev) => ({ ...prev, [field]: value }));
+    setIsDirty(true);
+  }, []);
+
+  const handleSaveProfile = async () => {
+    if (!id || !profile) return;
+
+    if (!editForm.email.trim()) {
+      toast.error("Email is required");
+      return;
+    }
+    if (editForm.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editForm.email)) {
+      toast.error("Invalid email format");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to update");
+      }
+      const data = await res.json();
+      setProfile(data.profile);
+      setEditing(false);
+      setIsDirty(false);
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSuspendUser = async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "suspended" }),
+      });
+      if (!res.ok) throw new Error("Failed to suspend");
+      const data = await res.json();
+      setProfile(data.profile);
+      toast.success("User suspended");
+    } catch (error) {
+      toast.error("Failed to suspend user");
+    }
+    setConfirmSuspend(false);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!id) return;
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to delete");
+      toast.success("User deleted");
+      window.location.href = "/users";
+    } catch (error) {
+      toast.error("Failed to delete user");
+    }
+    setConfirmDelete(false);
+  };
 
   const handleAddNote = async () => {
     if (!newNote.trim() || !id || !adminUser) return;
@@ -163,8 +284,9 @@ export default function UserDetailPage() {
         ...notes,
       ]);
       setNewNote("");
+      toast.success("Note added");
     } catch (error) {
-      console.error("Error adding note:", error);
+      toast.error("Failed to add note");
     }
   };
 
@@ -184,6 +306,7 @@ export default function UserDetailPage() {
 
       setImpersonating(true);
       setImpersonateCountdown(30 * 60);
+      toast.success("Impersonation session started (30 min)");
 
       const interval = setInterval(() => {
         setImpersonateCountdown((prev) => {
@@ -196,12 +319,16 @@ export default function UserDetailPage() {
         });
       }, 1000);
     } catch (error) {
-      console.error("Error starting impersonation:", error);
+      toast.error("Failed to start impersonation");
     }
   };
 
   const handleInviteMember = async () => {
     if (!inviteEmail.trim() || !id) return;
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inviteEmail)) {
+      toast.error("Invalid email format");
+      return;
+    }
     try {
       const res = await fetch(`/api/admin/users/${id}`, {
         method: "POST",
@@ -216,8 +343,9 @@ export default function UserDetailPage() {
       ]);
       setInviteEmail("");
       setInviteRole("viewer");
+      toast.success("Invitation sent");
     } catch (error) {
-      console.error("Error inviting member:", error);
+      toast.error("Failed to send invitation");
     }
   };
 
@@ -230,14 +358,14 @@ export default function UserDetailPage() {
         body: JSON.stringify({ action: "change_role", memberId, role: newRole }),
       });
       setTeamMembers(teamMembers.map((m) => (m.id === memberId ? { ...m, role: newRole as TeamMember["role"] } : m)));
+      toast.success("Role updated");
     } catch (error) {
-      console.error("Error changing role:", error);
+      toast.error("Failed to change role");
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
     if (!id) return;
-    if (!window.confirm("Are you sure you want to remove this team member?")) return;
     try {
       await fetch(`/api/admin/users/${id}`, {
         method: "POST",
@@ -245,14 +373,15 @@ export default function UserDetailPage() {
         body: JSON.stringify({ action: "remove_member", memberId }),
       });
       setTeamMembers(teamMembers.filter((m) => m.id !== memberId));
+      toast.success("Member removed");
     } catch (error) {
-      console.error("Error removing member:", error);
+      toast.error("Failed to remove member");
     }
+    setConfirmRemove(null);
   };
 
   const handleRevokeInvite = async (inviteId: string) => {
     if (!id) return;
-    if (!window.confirm("Are you sure you want to revoke this invitation?")) return;
     try {
       await fetch(`/api/admin/users/${id}`, {
         method: "POST",
@@ -260,9 +389,11 @@ export default function UserDetailPage() {
         body: JSON.stringify({ action: "revoke_invite", inviteId }),
       });
       setPendingInvites(pendingInvites.filter((inv) => inv.id !== inviteId));
+      toast.success("Invitation revoked");
     } catch (error) {
-      console.error("Error revoking invite:", error);
+      toast.error("Failed to revoke invitation");
     }
+    setConfirmRevoke(null);
   };
 
   const formatCountdown = (seconds: number) => {
@@ -285,16 +416,18 @@ export default function UserDetailPage() {
 
   if (!profile) {
     return (
-      <div className="text-center py-12">
-        <p className="text-muted-foreground">User not found.</p>
-        <Link href="/users">
-          <Button variant="outline" className="mt-4">
-            Back to Users
-          </Button>
-        </Link>
-      </div>
+      <EmptyState
+        icon={UserX}
+        title="User not found"
+        description="The user you're looking for doesn't exist or has been deleted."
+        actionLabel="Back to Users"
+        onAction={() => { window.location.href = "/users"; }}
+      />
     );
   }
+
+  const healthScore = computeHealthScore(profile, subscription, activity.length);
+  const health = getHealthColor(healthScore);
 
   return (
     <>
@@ -303,13 +436,33 @@ export default function UserDetailPage() {
       </Head>
 
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Link href="/users">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-1" /> Back
+        <Breadcrumb />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/users">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-1" /> Back
+              </Button>
+            </Link>
+            <h1 className="text-3xl font-bold tracking-tight">
+              {profile.full_name || profile.email}
+            </h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {!editing && (
+              <Button variant="outline" size="sm" onClick={startEditing}>
+                <Edit2 className="h-4 w-4 mr-1" /> Edit
+              </Button>
+            )}
+            {profile.status !== "suspended" && (
+              <Button variant="outline" size="sm" onClick={() => setConfirmSuspend(true)}>
+                <Ban className="h-4 w-4 mr-1" /> Suspend
+              </Button>
+            )}
+            <Button variant="destructive" size="sm" onClick={() => setConfirmDelete(true)}>
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
             </Button>
-          </Link>
-          <h1 className="text-3xl font-bold tracking-tight">User Detail</h1>
+          </div>
         </div>
 
         <div className="grid gap-6 md:grid-cols-3">
@@ -321,47 +474,99 @@ export default function UserDetailPage() {
                 size="lg"
                 className="mx-auto mb-4"
               />
-              <h2 className="text-xl font-bold">
-                {profile.full_name || "No Name"}
-              </h2>
-              <p className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
-                <Mail className="h-3 w-3" /> {profile.email}
-              </p>
-              <div className="flex items-center justify-center gap-2 mt-3">
-                <Badge variant="outline">
-                  <Shield className="h-3 w-3 mr-1" />
-                  {profile.role}
-                </Badge>
-                <Badge
-                  variant={
-                    profile.status === "active" ? "success" : "secondary"
-                  }
-                >
-                  {profile.status}
-                </Badge>
-              </div>
-              {(() => {
-                const healthScore = computeHealthScore(profile, subscription, activity.length);
-                const health = getHealthColor(healthScore);
-                return (
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-center gap-2">
-                      <span className="text-sm font-medium">Health Score</span>
-                      <Badge className={`${health.bg} ${health.text} border-transparent`}>
-                        {healthScore} — {health.label}
-                      </Badge>
-                    </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className={`h-2 rounded-full transition-all ${
-                          healthScore >= 70 ? "bg-green-500" : healthScore >= 40 ? "bg-yellow-500" : "bg-red-500"
-                        }`}
-                        style={{ width: `${healthScore}%` }}
-                      />
-                    </div>
+
+              {editing ? (
+                <div className="space-y-3 text-left">
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Full Name</label>
+                    <Input
+                      value={editForm.full_name}
+                      onChange={(e) => handleEditChange("full_name", e.target.value)}
+                      placeholder="Full name"
+                    />
                   </div>
-                );
-              })()}
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Email</label>
+                    <Input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => handleEditChange("email", e.target.value)}
+                      placeholder="Email"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Role</label>
+                    <Select
+                      value={editForm.role}
+                      onChange={(e) => handleEditChange("role", e.target.value)}
+                    >
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                      <option value="super_admin">Super Admin</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground">Status</label>
+                    <Select
+                      value={editForm.status}
+                      onChange={(e) => handleEditChange("status", e.target.value)}
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="pending">Pending</option>
+                    </Select>
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    <Button size="sm" className="flex-1" onClick={handleSaveProfile} disabled={saving}>
+                      <Save className="h-4 w-4 mr-1" /> {saving ? "Saving..." : "Save"}
+                    </Button>
+                    <Button variant="outline" size="sm" className="flex-1" onClick={cancelEditing} disabled={saving}>
+                      <X className="h-4 w-4 mr-1" /> Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-xl font-bold">
+                    {profile.full_name || "No Name"}
+                  </h2>
+                  <p className="text-sm text-muted-foreground flex items-center justify-center gap-1 mt-1">
+                    <Mail className="h-3 w-3" /> {profile.email}
+                  </p>
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <Badge variant="outline">
+                      <Shield className="h-3 w-3 mr-1" />
+                      {profile.role}
+                    </Badge>
+                    <Badge
+                      variant={
+                        profile.status === "active" ? "success" :
+                        profile.status === "suspended" ? "destructive" : "secondary"
+                      }
+                    >
+                      {profile.status}
+                    </Badge>
+                  </div>
+                </>
+              )}
+
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-center gap-2">
+                  <span className="text-sm font-medium">Health Score</span>
+                  <Badge className={`${health.bg} ${health.text} border-transparent`}>
+                    {healthScore} — {health.label}
+                  </Badge>
+                </div>
+                <div className="w-full bg-muted rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      healthScore >= 70 ? "bg-green-500" : healthScore >= 40 ? "bg-yellow-500" : "bg-red-500"
+                    }`}
+                    style={{ width: `${healthScore}%` }}
+                  />
+                </div>
+              </div>
 
               <div className="mt-4 space-y-2 text-sm text-muted-foreground">
                 <p className="flex items-center justify-center gap-1">
@@ -413,9 +618,9 @@ export default function UserDetailPage() {
             <Tabs defaultValue="subscription">
               <TabsList className="w-full justify-start">
                 <TabsTrigger value="subscription">Subscription</TabsTrigger>
-                <TabsTrigger value="activity">Activity</TabsTrigger>
-                <TabsTrigger value="team">Team</TabsTrigger>
-                <TabsTrigger value="notes">Admin Notes</TabsTrigger>
+                <TabsTrigger value="activity">Activity ({activity.length})</TabsTrigger>
+                <TabsTrigger value="team">Team ({teamMembers.length})</TabsTrigger>
+                <TabsTrigger value="notes">Notes ({notes.length})</TabsTrigger>
               </TabsList>
 
               <TabsContent value="subscription">
@@ -464,9 +669,11 @@ export default function UserDetailPage() {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-muted-foreground text-sm">
-                        No active subscription found.
-                      </p>
+                      <EmptyState
+                        icon={CreditCard}
+                        title="No subscription"
+                        description="This user doesn't have an active subscription."
+                      />
                     )}
                   </CardContent>
                 </Card>
@@ -481,9 +688,11 @@ export default function UserDetailPage() {
                   </CardHeader>
                   <CardContent>
                     {activity.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">
-                        No activity found.
-                      </p>
+                      <EmptyState
+                        icon={Activity}
+                        title="No activity"
+                        description="No activity has been recorded for this user."
+                      />
                     ) : (
                       <div className="space-y-3">
                         {activity.map((log) => (
@@ -500,7 +709,9 @@ export default function UserDetailPage() {
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {log.resource_type} &middot;{" "}
-                                {timeAgo(log.created_at)}
+                                <span title={formatDate(log.created_at)}>
+                                  {timeAgo(log.created_at)}
+                                </span>
                               </p>
                             </div>
                           </div>
@@ -546,13 +757,15 @@ export default function UserDetailPage() {
 
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-lg">Team Members</CardTitle>
+                      <CardTitle className="text-lg">Team Members ({teamMembers.length})</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {teamMembers.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">
-                          No team members found.
-                        </p>
+                        <EmptyState
+                          icon={UserPlus}
+                          title="No team members"
+                          description="This user's organization has no other team members."
+                        />
                       ) : (
                         <Table>
                           <TableHeader>
@@ -584,13 +797,15 @@ export default function UserDetailPage() {
                                   </Select>
                                 </TableCell>
                                 <TableCell>
-                                  {formatDate(member.joined_at)}
+                                  <span title={formatDate(member.joined_at)}>
+                                    {timeAgo(member.joined_at)}
+                                  </span>
                                 </TableCell>
                                 <TableCell className="text-right">
                                   <Button
                                     variant="destructive"
                                     size="sm"
-                                    onClick={() => handleRemoveMember(member.id)}
+                                    onClick={() => setConfirmRemove(member.id)}
                                   >
                                     <Trash2 className="h-3 w-3 mr-1" /> Remove
                                   </Button>
@@ -606,7 +821,7 @@ export default function UserDetailPage() {
                   {pendingInvites.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-lg">Pending Invitations</CardTitle>
+                        <CardTitle className="text-lg">Pending Invitations ({pendingInvites.length})</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <Table>
@@ -625,12 +840,16 @@ export default function UserDetailPage() {
                                 <TableCell>
                                   <Badge variant="outline">{invite.role}</Badge>
                                 </TableCell>
-                                <TableCell>{formatDate(invite.created_at)}</TableCell>
+                                <TableCell>
+                                  <span title={formatDate(invite.created_at)}>
+                                    {timeAgo(invite.created_at)}
+                                  </span>
+                                </TableCell>
                                 <TableCell className="text-right">
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => handleRevokeInvite(invite.id)}
+                                    onClick={() => setConfirmRevoke(invite.id)}
                                   >
                                     <XCircle className="h-3 w-3 mr-1" /> Revoke
                                   </Button>
@@ -671,9 +890,11 @@ export default function UserDetailPage() {
                       </div>
 
                       {notes.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">
-                          No admin notes yet.
-                        </p>
+                        <EmptyState
+                          icon={StickyNote}
+                          title="No notes"
+                          description="No admin notes have been added for this user."
+                        />
                       ) : (
                         <div className="space-y-3">
                           {notes.map((note) => (
@@ -683,7 +904,9 @@ export default function UserDetailPage() {
                             >
                               <p className="text-sm">{note.note}</p>
                               <p className="text-xs text-muted-foreground mt-2">
-                                {timeAgo(note.created_at)}
+                                <span title={formatDate(note.created_at)}>
+                                  {timeAgo(note.created_at)}
+                                </span>
                               </p>
                             </div>
                           ))}
@@ -697,6 +920,46 @@ export default function UserDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmSuspend}
+        onConfirm={handleSuspendUser}
+        onCancel={() => setConfirmSuspend(false)}
+        title="Suspend User"
+        message={`Are you sure you want to suspend ${profile.full_name || profile.email}? They will be unable to access the platform.`}
+        confirmText="Suspend"
+        destructive
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onConfirm={handleDeleteUser}
+        onCancel={() => setConfirmDelete(false)}
+        title="Delete User"
+        message={`Are you sure you want to permanently delete ${profile.full_name || profile.email}? This action cannot be undone.`}
+        confirmText="Delete"
+        destructive
+      />
+
+      <ConfirmDialog
+        open={!!confirmRemove}
+        onConfirm={() => confirmRemove && handleRemoveMember(confirmRemove)}
+        onCancel={() => setConfirmRemove(null)}
+        title="Remove Team Member"
+        message="Are you sure you want to remove this team member? They will lose access to the organization."
+        confirmText="Remove"
+        destructive
+      />
+
+      <ConfirmDialog
+        open={!!confirmRevoke}
+        onConfirm={() => confirmRevoke && handleRevokeInvite(confirmRevoke)}
+        onCancel={() => setConfirmRevoke(null)}
+        title="Revoke Invitation"
+        message="Are you sure you want to revoke this invitation?"
+        confirmText="Revoke"
+        destructive
+      />
     </>
   );
 }

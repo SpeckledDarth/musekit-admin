@@ -152,3 +152,15 @@ Infrastructure for the functional layer — all reusable components, hooks, and 
 - **logAuditEvent** (`src/lib/audit-log.ts`): Server-side audit log helper for all CRUD mutations
 - **App Router Fix A**: `setup/index.tsx` and `users/[id].tsx` migrated from `next/router` to `next/navigation`
 - All new components/hooks exported from `src/index.ts`
+
+### Prompt 09 Sprint 2: Page Upgrades (Session 16)
+Applied Standards B (list-view), C (CRUD + audit), and E (UX) to 5 pages + Users detail:
+- **Users list** (`src/pages/users/index.tsx`): Sortable columns (7), debounced search, 25-row pagination, checkbox + bulk actions (suspend/delete/export CSV), clickable rows, Invite User modal, EmptyState, row count in title, relative timestamps, toast notifications, ConfirmDialog for destructive actions
+- **Users detail** (`src/pages/users/[id].tsx`): Inline profile editing (name/email/role/status) with save/cancel, Suspend + Delete user with ConfirmDialog, unsaved changes guard, form validation, breadcrumbs, toasts, EmptyState for empty tabs, relative timestamps with tooltips, tab counts
+- **Users API** (`src/pages/api/admin/users/[id].ts`): Added PUT (update profile) + DELETE (delete user) handlers with audit logging via logAuditEvent
+- **Users list API** (`src/pages/api/admin/users.ts`): Changed PAGE_SIZE to 25, added POST actions for invite/bulk_suspend/bulk_delete with audit logging
+- **Audit Log** (`src/pages/audit-log.tsx`): Sortable column headers (5 columns), Export CSV button, row count in title, relative timestamps with tooltips
+- **Revenue** (`src/pages/revenue.tsx`): Sortable transaction table, plan + status filters, clickable rows with detail modal, 25-row pagination, checkbox + bulk export, row count, relative timestamps
+- **Feature Toggles** (`src/pages/feature-toggles.tsx`): Converted to table layout, sortable columns, category filter, edit modal, delete with ConfirmDialog, bulk enable/disable/delete, CSV export, Add Toggle modal, row count, toasts
+- **Feature Toggles API** (`src/pages/api/admin/setup/feature-toggles.ts`): Added PATCH (edit) + DELETE handlers with audit logging
+- **Branding** (`src/pages/setup/branding.tsx`): ImageUpload for logo + favicon (drag-drop, 5MB limit), unsaved changes guard, toast notifications on save

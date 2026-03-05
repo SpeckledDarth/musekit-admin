@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { logAuditEvent } from "@/lib/audit-log";
 
 export default async function handler(
   req: NextApiRequest,
@@ -213,6 +214,67 @@ export default async function handler(
       } else {
         res.status(400).json({ error: "Unknown action" });
       }
+    } else if (req.method === "PUT") {
+      const { full_name, email, role, status } = req.body;
+      const updates: Record<string, string> = {};
+      if (full_name !== undefined) updates.full_name = full_name;
+      if (email !== undefined) updates.email = email;
+      if (role !== undefined) updates.role = role;
+      if (status !== undefined) updates.status = status;
+
+      if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: "No fields to update" });
+      }
+
+      const { data: before } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      updates.updated_at = new Date().toISOString();
+      const { error } = await supabase
+        .from("profiles")
+        .update(updates)
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await logAuditEvent("user_profile_updated", admin.userId, {
+        resource_type: "user",
+        resource_id: id,
+        before: before || {},
+        after: updates,
+      });
+
+      const { data: updated } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      res.status(200).json({ profile: updated });
+    } else if (req.method === "DELETE") {
+      const { data: before } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      const { error } = await supabase
+        .from("profiles")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+
+      await logAuditEvent("user_deleted", admin.userId, {
+        resource_type: "user",
+        resource_id: id,
+        before: before || {},
+      });
+
+      res.status(200).json({ success: true });
     } else {
       res.status(405).json({ error: "Method not allowed" });
     }

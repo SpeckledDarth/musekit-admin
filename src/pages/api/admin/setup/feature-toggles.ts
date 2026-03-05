@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { logAuditEvent } from "@/lib/audit-log";
 
 interface ToggleData {
   name: string;
@@ -67,12 +68,20 @@ export default async function handler(
           parsed = { name: id.replace("feature.", ""), category: "general", enabled: false, description: "" };
         }
       }
+      const previousEnabled = parsed.enabled;
       parsed.enabled = enabled;
 
       const { error } = await supabase
         .from("settings")
         .upsert({ key: id, value: JSON.stringify(parsed) }, { onConflict: "key" });
       if (error) throw error;
+
+      await logAuditEvent("feature_toggle.toggle", admin.userId, {
+        resource_type: "feature_toggle",
+        resource_id: id,
+        before: { enabled: previousEnabled },
+        after: { enabled },
+      });
 
       res.status(200).json({ success: true });
     } else if (req.method === "PUT") {
@@ -94,6 +103,12 @@ export default async function handler(
         .upsert({ key: settingKey, value: JSON.stringify(toggleData) }, { onConflict: "key" });
       if (error) throw error;
 
+      await logAuditEvent("feature_toggle.create", admin.userId, {
+        resource_type: "feature_toggle",
+        resource_id: settingKey,
+        after: toggleData,
+      });
+
       res.status(200).json({
         toggle: {
           id: settingKey,
@@ -102,6 +117,78 @@ export default async function handler(
           updated_at: new Date().toISOString(),
         },
       });
+    } else if (req.method === "PATCH") {
+      const { key, name, category, description } = req.body;
+      if (!key) {
+        return res.status(400).json({ error: "Toggle key is required" });
+      }
+
+      const settingKey = `feature.${key}`;
+      const { data: existing } = await supabase
+        .from("settings")
+        .select("value")
+        .eq("key", settingKey)
+        .single();
+
+      if (!existing) {
+        return res.status(404).json({ error: "Toggle not found" });
+      }
+
+      let parsed: ToggleData = { name: key, category: "general", enabled: false, description: "" };
+      try {
+        parsed = JSON.parse(existing.value);
+      } catch {
+        // keep defaults
+      }
+
+      const before = { ...parsed };
+      parsed.name = name ?? parsed.name;
+      parsed.category = category ?? parsed.category;
+      parsed.description = description ?? parsed.description;
+
+      const { error } = await supabase
+        .from("settings")
+        .update({ value: JSON.stringify(parsed) })
+        .eq("key", settingKey);
+      if (error) throw error;
+
+      await logAuditEvent("feature_toggle.edit", admin.userId, {
+        resource_type: "feature_toggle",
+        resource_id: settingKey,
+        before,
+        after: parsed,
+      });
+
+      res.status(200).json({
+        toggle: {
+          id: settingKey,
+          key,
+          name: parsed.name,
+          category: parsed.category,
+          enabled: parsed.enabled,
+          description: parsed.description,
+          updated_at: new Date().toISOString(),
+        },
+      });
+    } else if (req.method === "DELETE") {
+      const { key } = req.body;
+      if (!key) {
+        return res.status(400).json({ error: "Toggle key is required" });
+      }
+
+      const settingKey = `feature.${key}`;
+      const { error } = await supabase
+        .from("settings")
+        .delete()
+        .eq("key", settingKey);
+      if (error) throw error;
+
+      await logAuditEvent("feature_toggle.delete", admin.userId, {
+        resource_type: "feature_toggle",
+        resource_id: settingKey,
+      });
+
+      res.status(200).json({ success: true });
     } else {
       res.status(405).json({ error: "Method not allowed" });
     }

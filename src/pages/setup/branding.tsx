@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import Head from "next/head";
 import { SetupLayout } from "@/layout/SetupLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { ImageUpload } from "@/components/ui/ImageUpload";
 import { useSettings } from "@/hooks/useSettings";
+import { useUnsavedChanges } from "@/hooks/useUnsavedChanges";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Paintbrush, Upload, Eye, Info } from "lucide-react";
+import { toast } from "sonner";
+import { Paintbrush, Eye, Info } from "lucide-react";
 
 const heroStyles = [
   "full-width",
@@ -22,8 +25,29 @@ const heroStyles = [
 const footerLayouts = ["4-column", "minimal", "centered"];
 
 export default function BrandingPage() {
-  const { getSetting, updateSetting, saveSettings, loading, saving } =
+  const { getSetting, updateSetting: rawUpdateSetting, saveSettings, loading, saving } =
     useSettings("branding");
+  const [isDirty, setIsDirty] = useState(false);
+
+  useUnsavedChanges(isDirty);
+
+  const updateSetting = useCallback(
+    (key: string, value: string) => {
+      rawUpdateSetting(key, value);
+      setIsDirty(true);
+    },
+    [rawUpdateSetting]
+  );
+
+  const handleSave = useCallback(async () => {
+    try {
+      await saveSettings();
+      setIsDirty(false);
+      toast.success("Branding settings saved");
+    } catch (error) {
+      toast.error("Failed to save branding settings");
+    }
+  }, [saveSettings]);
 
   if (loading) {
     return (
@@ -54,7 +78,7 @@ export default function BrandingPage() {
                 Configure your brand identity and visual appearance.
               </p>
             </div>
-            <Button onClick={saveSettings} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving}>
               {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
@@ -82,16 +106,19 @@ export default function BrandingPage() {
               </div>
               <div>
                 <label className="text-sm font-medium">Logo URL</label>
-                <div className="flex gap-2">
-                  <Input
-                    value={getSetting("logoUrl")}
-                    onChange={(e) => updateSetting("logoUrl", e.target.value)}
-                    placeholder="https://..."
-                  />
-                  <Button variant="outline" size="icon">
-                    <Upload className="h-4 w-4" />
-                  </Button>
-                </div>
+                <ImageUpload
+                  value={getSetting("logoUrl")}
+                  onChange={(url) => updateSetting("logoUrl", url)}
+                  folder="branding"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium">Favicon</label>
+                <ImageUpload
+                  value={getSetting("faviconUrl")}
+                  onChange={(url) => updateSetting("faviconUrl", url)}
+                  folder="branding"
+                />
               </div>
               <div>
                 <label className="text-sm font-medium">Primary Color</label>
