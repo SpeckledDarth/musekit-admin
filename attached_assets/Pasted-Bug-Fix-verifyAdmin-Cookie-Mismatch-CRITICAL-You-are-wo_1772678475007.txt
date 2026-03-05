@@ -1,0 +1,188 @@
+Bug Fix: verifyAdmin() Cookie Mismatch — CRITICAL
+You are working in the musekit-admin Repl, which contains the @musekit/admin package. This package provides the entire admin dashboard for a SaaS platform — user management, metrics, audit logs, settings, feature toggles, and more.
+
+Stack: React 18, TypeScript, Next.js API routes (Pages Router style), Tailwind CSS v3, @supabase/supabase-js, shadcn/ui components, recharts, lucide-react.
+
+The Problem
+Every single admin API route returns 401 Unauthorized for logged-in users. The entire admin dashboard is broken — no data loads, no saves work, nothing functions. This is caused by a single bug in the authentication function.
+
+Root Cause
+File: src/lib/admin-auth.ts
+
+The verifyAdmin() function is called by every admin API route to authenticate the user. When no Authorization: Bearer <token> header is present (which is the normal case for browser requests), it falls back to reading a session cookie. The problem is it looks for a cookie named sb-access-token — this cookie does not exist.
+
+Supabase SSR (@supabase/ssr) stores session tokens in cookies named sb-<project-ref>-auth-token, split into chunks like .0, .1, etc. The hardcoded name sb-access-token never matches any cookie, so the function always returns 401.
+
+Current broken code (full file, src/lib/admin-auth.ts):
+
+import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+export async function verifyAdmin(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<{ userId: string; email: string; role: string } | null> {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace("Bearer ", "");
+  if (!token) {
+    const cookieHeader = req.headers.cookie || "";
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const sbAccessToken = extractCookieValue(
+      cookieHeader,
+      "sb-access-token"   // <-- BUG: this cookie name doesn't exist
+    );
+    if (!sbAccessToken) {
+      res.status(401).json({ error: "Unauthorized" });
+      return null;                                        // <-- always hits this
+    }
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser(sbAccessToken);
+    if (error || !user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return null;
+    }
+    const { createSupabaseAdmin } = await import("./supabase");
+    const adminClient = createSupabaseAdmin();
+    const { data: profile } = await adminClient
+      .from("profiles")
+      .select("role, email")
+      .eq("id", user.id)
+      .single();
+    if (
+      !profile ||
+      (profile.role !== "admin" && profile.role !== "super_admin")
+    ) {
+      res.status(403).json({ error: "Forbidden: Admin access required" });
+      return null;
+    }
+    return { userId: user.id, email: profile.email, role: profile.role };
+  }
+  // ... Bearer token path (works but never reached from browser)
+}
+function extractCookieValue(
+  cookieHeader: string,
+  name: string
+): string | null {
+  const match = cookieHeader.match(
+    new RegExp(`(?:^|;\\s*)${name}=([^;]*)`)
+  );
+  return match ? decodeURIComponent(match[1]) : null;
+}
+What You Need To Fix
+Replace the cookie-based authentication path so it works with Supabase SSR cookies. The fix should use @supabase/ssr's createServerClient to create a Supabase client that can read the chunked auth cookies from the request, then call getUser() on that client.
+
+Install @supabase/ssr if it's not already a dependency:
+
+npm install @supabase/ssr
+Rewrite src/lib/admin-auth.ts:
+
+The cookie path (the if (!token) block, lines 14-55) should be replaced with something like this:
+
+import type { NextApiRequest, NextApiResponse } from "next";
+import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+export async function verifyAdmin(
+  req: NextApiRequest,
+  res: NextApiResponse
+): Promise<{ userId: string; email: string; role: string } | null> {
+  const authHeader = req.headers.authorization;
+  const token = authHeader?.replace("Bearer ", "");
+  let user: { id: string; email?: string; [key: string]: unknown } | null = null;
+  if (token) {
+    // Bearer token path (for programmatic API calls)
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return null;
+    }
+    user = data.user;
+  } else {
+    // Cookie path (for browser requests) — use @supabase/ssr
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          const cookieHeader = req.headers.cookie || "";
+          return cookieHeader
+            .split(";")
+            .filter((c) => c.trim())
+            .map((c) => {
+              const [name, ...rest] = c.trim().split("=");
+              return { name, value: rest.join("=") };
+            });
+        },
+        setAll() {
+          // Read-only for API route verification
+        },
+      },
+    });
+    const { data, error } = await supabase.auth.getUser();
+    if (error || !data.user) {
+      res.status(401).json({ error: "Unauthorized" });
+      return null;
+    }
+    user = data.user;
+  }
+  // Check admin role in profiles table
+  const { createSupabaseAdmin } = await import("./supabase");
+  const adminClient = createSupabaseAdmin();
+  const { data: profile } = await adminClient
+    .from("profiles")
+    .select("role, email")
+    .eq("id", user.id)
+    .single();
+  if (
+    !profile ||
+    (profile.role !== "admin" && profile.role !== "super_admin")
+  ) {
+    res.status(403).json({ error: "Forbidden: Admin access required" });
+    return null;
+  }
+  return { userId: user.id, email: profile.email, role: profile.role };
+}
+Key changes:
+
+Replaced extractCookieValue(cookieHeader, "sb-access-token") with createServerClient from @supabase/ssr
+The SSR client automatically finds and reconstructs Supabase auth cookies regardless of project ref or chunking
+Uses getUser() (no token argument) — the SSR client handles session resolution internally
+Deduplicated the admin role check (was duplicated in both paths)
+Removed the extractCookieValue helper (no longer needed)
+Other Files In This Package
+src/lib/supabase.ts — Provides createSupabaseAdmin() which creates a Supabase client using SUPABASE_SERVICE_ROLE_KEY. This is used in verifyAdmin for the profiles lookup. This file does NOT need changes.
+
+All admin API routes — Every route in src/pages/api/admin/ calls verifyAdmin(req, res) as its first line. None of them need changes — once verifyAdmin is fixed, they all work.
+
+Environment Variables Required
+These must be set for verifyAdmin to work:
+
+NEXT_PUBLIC_SUPABASE_URL — Your Supabase project URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY — Your Supabase anon/public key
+SUPABASE_SERVICE_ROLE_KEY — Your Supabase service role key (for admin profile lookup)
+How To Test
+Make sure your Supabase project has a profiles table with columns id (UUID, references auth.users), role (text), and email (text)
+Make sure at least one user has role = 'admin' or role = 'super_admin'
+Start the dev server
+Log in as that admin user via the app's login page
+Open browser dev tools → Network tab
+Navigate to any admin page (e.g., /admin)
+Watch the API calls to /api/admin/overview — they should return 200 with data, not 401
+Test saving settings on /admin/setup/branding or similar — the POST should return 200
+If you don't have the full app running, you can test the function in isolation:
+
+// Create a mock request with Supabase SSR cookies
+// The cookie names follow the pattern: sb-<project-ref>-auth-token.0
+// You can find the actual cookies by logging in via the browser and checking dev tools
+Acceptance Criteria
+verifyAdmin() authenticates users via Supabase SSR cookies (chunked sb-*-auth-token* format)
+verifyAdmin() still works with Authorization: Bearer <token> header for programmatic access
+Admin users (role admin or super_admin) get 200 responses from all admin API routes
+Non-admin users get 403 Forbidden
+Unauthenticated requests get 401 Unauthorized
+@supabase/ssr is added as a dependency
+TypeScript compiles without errors
+No changes needed to any API route files — only src/lib/admin-auth.ts changes
