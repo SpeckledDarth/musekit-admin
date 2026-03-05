@@ -1,0 +1,116 @@
+musekit-admin — Fix All Table References and Actions
+Context
+You are working in the musekit-admin module Repl. This builds packages/admin/.
+
+Stack: React 18, TypeScript, Tailwind CSS v3, shadcn/ui, recharts, lucide-react Pattern: "use client" components fetching from /api/admin/* endpoints.
+
+CRITICAL: The code references table names that don't match the real database. Here is the complete mapping of what needs to change:
+
+Code currently says	Real DB table	Column differences
+brand_settings	settings	NO updated_at column; columns: id, key, value
+team_invites	invitations	uses organization_id not team_id; has token, invited_by, expires_at, accepted_at
+team_members	organization_members	uses organization_id not team_id; columns: id, organization_id, user_id, role, joined_at
+support_tickets	tickets	uses description not message; has ticket_number, category, resolved_at, closed_at
+subscriptions	muse_product_subscriptions	has product_slug, tier_id, cancel_at_period_end
+waitlist	waitlist_entries	same structure
+api_keys	config_secrets	uses key_name not name, encrypted_value not value; columns: id, key_name, encrypted_value, updated_at, updated_by
+feature_toggles	DOES NOT EXIST	store in settings as key/value or create table
+Tables that are correct (no changes needed): profiles, organizations, audit_logs, notifications, feedback, email_templates
+
+FIX 1 (Critical): Settings API — rename brand_settings → settings
+File: src/pages/api/admin/setup/settings.ts
+
+Lines 17, 28, 38: Change .from("brand_settings") → .from("settings")
+
+ALSO: Remove updated_at from upsert calls (lines 28-30, 37-40). The settings table only has: id, key, value.
+
+Before: .upsert({ key: s.key, value: s.value, updated_at: new Date().toISOString() }, { onConflict: "key" })
+
+After: .upsert({ key: s.key, value: s.value }, { onConflict: "key" })
+
+FIX 2 (Critical): User API — fix ALL table names
+File: src/pages/api/admin/users/[id].ts
+
+Multiple table name fixes needed:
+
+Lines 45, 157, 176: .from("team_members") → .from("organization_members") AND change any team_id column refs → organization_id
+
+Lines 59, 139, 195: .from("team_invites") → .from("invitations") AND change any team_id column refs → organization_id
+
+Line 32: .from("subscriptions") → .from("muse_product_subscriptions")
+
+FIX 3 (Critical): Customer Service API — fix table and columns
+File: src/pages/api/admin/customer-service.ts
+
+Lines 20, 175: .from("support_tickets") → .from("tickets")
+Line 117: .from("subscriptions") → .from("muse_product_subscriptions")
+Update column references to match tickets table:
+message → description
+Add ticket_number, category to queries if used in UI
+The tickets table columns are: id, user_id, assigned_to, subject, description, status, priority, category, ticket_number, created_at, updated_at, resolved_at, closed_at
+
+Also: The DB has a ticket_comments table (id, ticket_id, user_id, body, is_internal, created_at) — wire this up if ticket detail view shows comments.
+
+FIX 4 (Critical): Metrics and Overview APIs — fix table names
+File: src/pages/api/admin/metrics.ts
+
+Line 36: .from("subscriptions") → .from("muse_product_subscriptions")
+Line 40: .from("subscriptions") → .from("muse_product_subscriptions")
+Line 44: .from("waitlist") → .from("waitlist_entries")
+File: src/pages/api/admin/overview.ts
+
+Line 22: .from("subscriptions") → .from("muse_product_subscriptions")
+File: src/pages/api/admin/revenue.ts
+
+Line 20: .from("subscriptions") → .from("muse_product_subscriptions")
+FIX 5 (Critical): API Keys setup — fix table and columns
+File: src/pages/api/admin/setup/api-keys.ts
+
+Lines 22, 38, 43, 55: .from("api_keys") → .from("config_secrets")
+Column mapping: name → key_name, value/key → encrypted_value
+The config_secrets columns: id, key_name, encrypted_value, updated_at, updated_by
+FIX 6 (Critical): Feature Toggles — table doesn't exist
+File: src/pages/api/admin/setup/feature-toggles.ts
+
+.from("feature_toggles") → This table does not exist
+Option A (recommended): Store toggles as key/value in settings table (key: "feature.xxx", value: "true"/"false")
+Option B: Create a feature_toggles table in Supabase
+FIX 7 (High): Testimonials page — "Failed to load"
+File: src/pages/setup/testimonials.tsx
+
+Check what table/endpoint this queries. The DB has an affiliate_testimonials table — if testimonials are stored there, update the reference. Otherwise store as a JSON value in settings (key: "testimonials.items").
+
+FIX 8 (Medium): Email template actions — Send Test, Edit, Create
+File: src/pages/setup/email.tsx
+
+The email_templates table exists and matches. Columns: id, name, subject, body, description, created_at, updated_at, category
+
+Ensure action buttons have working handlers for CRUD operations.
+
+FIX 9 (Medium): CSV Export for list pages
+Create src/lib/csv-export.ts with a reusable downloadCSV function:
+
+export function downloadCSV(data: any[], filename: string) {
+  if (!data.length) return;
+  const headers = Object.keys(data[0]);
+  const csv = [
+    headers.join(','),
+    ...data.map(row => headers.map(h => JSON.stringify(row[h] ?? '')).join(','))
+  ].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${filename}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+Wire Export CSV buttons on: Users, Team, Revenue, Subscriptions, Tickets.
+
+Testing Checklist
+Admin > Settings > Branding — loads and saves (no updated_at errors)
+Admin > People > Users — user detail loads subscriptions and team data
+Admin > Customer Service — ticket list loads from tickets table
+Admin > Metrics — dashboard shows real counts
+Admin > Setup > API Keys — loads from config_secrets
+No console errors about missing tables/columns
