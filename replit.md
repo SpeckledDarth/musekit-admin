@@ -138,3 +138,17 @@ Fixed all table name and column mismatches between codebase and real Supabase sc
 - Admin responses now saved to `ticket_comments` table
 - Email templates aligned with real column names, added Create/Delete handlers
 - Reusable CSV export utility added (`src/lib/csv-export.ts`), wired to Users, Tickets, Revenue
+
+### Prompt 09 Sprint 1: Foundations (Session 15)
+Infrastructure for the functional layer — all reusable components, hooks, and utilities:
+- **Sonner toasts**: Installed `sonner`, added `<Toaster />` to `_app.tsx` for app-wide toast notifications
+- **ConfirmDialog** (`src/components/ui/ConfirmDialog.tsx`): Reusable modal for destructive confirmations with `destructive` variant
+- **EmptyState** (`src/components/ui/EmptyState.tsx`): Reusable empty-state component with icon, title, description, CTA
+- **ImageUpload** (`src/components/ui/ImageUpload.tsx`): Supabase Storage drag-drop uploader with progress, preview, 5MB limit
+- **useSortable** (`src/hooks/useSortable.ts`): Generic column sorting hook (asc → desc → none toggle)
+- **useDebounce** (`src/hooks/useDebounce.ts`): Value debouncing hook (300ms default)
+- **useUnsavedChanges** (`src/hooks/useUnsavedChanges.ts`): beforeunload guard for dirty forms
+- **useListView** (`src/hooks/useListView.ts`): URL-persisted search/filter/sort/pagination via router query params
+- **logAuditEvent** (`src/lib/audit-log.ts`): Server-side audit log helper for all CRUD mutations
+- **App Router Fix A**: `setup/index.tsx` and `users/[id].tsx` migrated from `next/router` to `next/navigation`
+- All new components/hooks exported from `src/index.ts`
