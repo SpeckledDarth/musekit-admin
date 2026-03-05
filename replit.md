@@ -14,6 +14,7 @@ This is the admin panel for MuseKit, built with Next.js 14 (Pages Router). It pr
 - **Charts**: Recharts
 - **Icons**: Lucide React
 - **Database**: Supabase (PostgreSQL)
+- **Auth SSR**: @supabase/ssr (cookie-based session handling for API routes)
 - **Payments**: Stripe (subscription lookups)
 
 ## Architecture
@@ -48,7 +49,7 @@ docs/                   # Sprint plans and documentation
 ### Key Patterns
 
 - **API Routes**: All Supabase admin (service role) operations go through `/api/admin/*` API routes to keep the service role key server-side only
-- **Admin Auth**: All API routes use `verifyAdmin()` middleware from `src/lib/admin-auth.ts`
+- **Admin Auth**: All API routes use `verifyAdmin()` from `src/lib/admin-auth.ts` — supports both Bearer token (programmatic) and Supabase SSR cookies (browser) via `@supabase/ssr`
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns
 - **Setup Settings**: Uses `brand_settings` table with `key/value` pairs; `useSettings(prefix)` hook manages load/save per prefix
@@ -111,8 +112,13 @@ All 11 gaps closed across 6 sprints:
 - **Gap 4**: Revenue dashboard (MRR/ARR/ARPU cards, trend charts, transaction table, CSV export)
 - **Gap 5**: Support ticket admin (tabbed customer service with ticket CRUD)
 - **Gap 6**: Testimonials CRUD setup page (add/edit/delete/reorder/approve/feature)
-- **Gap 7**: API keys expanded to 47 platforms across 11 categories with search
+- **Gap 7**: API keys expanded to 52 platforms across 12 categories with search
 - **Gap 8**: CSS dashboard (interactive variable editor, live preview, light/dark toggle, export)
 - **Gap 9**: PassivePost expanded to 5-tab config (platforms, scheduling, templates, AI prompts, analytics)
 - **Gap 10**: CAPTCHA admin config (provider selector, keys, per-page toggles, test button)
 - **Gap 11**: Watermark settings in branding page (toggle, text, preview)
+
+### Security Fix (Session 13)
+- Fixed critical `verifyAdmin()` cookie auth bug — replaced hardcoded `sb-access-token` cookie name with `@supabase/ssr`'s `createServerClient` which handles chunked Supabase auth cookies automatically
+- Deduplicated admin role check into single code path
+- Removed obsolete `extractCookieValue` helper
