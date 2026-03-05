@@ -1,0 +1,632 @@
+Prompt 09: musekit-admin — Complete Functional Layer (App Router Fix + List View Standards + Full CRUD + Image Uploads + Section Content Editor)
+Module Repl
+musekit-admin (GitHub: SpeckledDarth/musekit-admin)
+
+Context
+The admin dashboard renders correctly but is mostly a UI shell. Most pages display data but lack the functional layer needed to actually manage the application. This prompt covers everything needed to make the admin fully operational.
+
+CRITICAL FIX A: App Router Compatibility (2 Files)
+These two files use the Next.js Pages Router API which crashes in the integration monorepo's App Router.
+
+1. src/pages/setup/index.tsx
+Current (BROKEN):
+
+import { useEffect } from "react";
+import { useRouter } from "next/router";
+export default function SetupIndex() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/setup/branding");
+  }, [router]);
+  return null;
+}
+Fixed:
+
+"use client";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+export default function SetupIndex() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/admin/setup/branding");
+  }, [router]);
+  return null;
+}
+Changes: Added "use client", next/router → next/navigation, redirect /setup/branding → /admin/setup/branding.
+
+2. src/pages/users/[id].tsx
+Current (BROKEN — lines 3 and ~101-102):
+
+import { useRouter } from "next/router";
+// ...
+const router = useRouter();
+const { id } = router.query;
+Fixed:
+
+import { useParams } from "next/navigation";
+// ...
+const params = useParams();
+const id = params?.id as string | undefined;
+STANDARD B: Site-Wide List View Requirements
+Apply these standards to EVERY page that shows a table or list of records. This is not optional — every admin table must have all four of these:
+
+B1. Column Sorting
+Every column header must be clickable
+Clicking toggles between ascending → descending → no sort
+Show a visual indicator (arrow up/down) on the currently sorted column
+Implement as a reusable hook or utility: useSortable(data, defaultColumn, defaultDirection)
+B2. Search
+Every list view must have a search input above the table
+Search should filter across all visible text columns (name, email, title, description, etc.)
+Client-side filtering is acceptable for lists under 1000 rows
+Search should be debounced (300ms)
+B3. Filter
+Every list view must have relevant filter dropdowns next to the search bar
+Filters should reflect the data's categorical fields (status, type, priority, role, etc.)
+"All" should always be the default option
+Multiple filters can be active simultaneously
+B4. Row Click-Through
+Every row in every table must be clickable
+Clicking a row opens a detail view — either:
+A full detail page (preferred for complex records like users, tickets), OR
+A slide-over panel / modal (acceptable for simpler records)
+The entire row should have cursor-pointer and a hover highlight
+Detail views must show ALL fields from the database record, including related data
+B5. Pagination
+25 rows per page default
+Page controls: Prev/Next buttons, page number indicators, "Showing 1–25 of 47" label
+Current page number stored in URL query param (?page=2) so pagination state is shareable/bookmarkable
+When filters change, reset to page 1
+B6. URL-Persisted Filters
+All search, filter, and sort state must be stored in URL query params: ?search=john&status=active&sort=created_at&dir=desc
+Use useSearchParams() from next/navigation to read/write params
+On page load, initialize filter state from URL params (enables shareable filtered views, back button works)
+Update URL on every filter/search/sort change (use router.replace to avoid history spam)
+B7. Bulk Operations
+Every table must have a checkbox column as the first column
+Checkbox in the header row selects/deselects all visible rows
+When one or more rows are selected, show a floating action bar at the bottom of the table with contextual bulk actions:
+Bulk delete (with confirmation dialog showing count)
+Bulk status change (where applicable)
+Bulk export selected rows as CSV
+Show selected count: "3 selected"
+Clear selection button
+B8. CSV Export
+Every list view must have an "Export CSV" button in the page header (next to search/filters)
+Export all rows matching current filters (not just the current page)
+Include all visible columns plus ID
+Use standard CSV format with headers
+Trigger browser download with filename: {entity}_{date}.csv (e.g., users_2026-03-05.csv)
+Three pages already have this — apply the same pattern everywhere
+STANDARD C: Full CRUD on All Applicable Pages
+Every entity that an admin manages must support Create, Read, Update, and Delete unless there's a specific reason not to (e.g., audit logs are read-only by nature).
+
+For each action:
+
+Create: Button in the page header → opens a form (modal or full page)
+Edit: Click row to open detail → edit button → inline editing or edit form
+Delete: Delete button with confirmation dialog ("Are you sure? This cannot be undone.")
+Bulk actions: Checkbox column → bulk delete, bulk status change
+Audit Logging (applies to ALL CRUD operations)
+Every create, update, delete, role change, status change, and setting update must write a row to the audit_logs table. The actual table columns are: id, user_id, action, details (jsonb), ip_address, created_at. Use them as follows:
+
+action — e.g., user.created, page.updated, ticket.deleted, setting.changed, role.changed
+user_id — UUID of the admin performing the action
+details — JSON object containing: resource_type (e.g., user, page, ticket), resource_id (UUID of affected record), before (previous values for updates), after (new values for updates), or the full record for creates/deletes
+ip_address — capture from request if available, otherwise omit
+created_at — auto-populated by database default (now())
+Use a reusable logAuditEvent(action, userId, details) helper function. Call it in every mutation handler alongside the actual Supabase insert/update/delete.
+
+Page-by-Page Requirements
+1. Users (src/pages/users/index.tsx)
+Currently has: Search, role/status filters, View button → detail page, Export CSV Missing:
+
+Column sorting (add to: Name, Email, Role, Status, Health Score, Created, Last Sign In)
+Create user action (invite new user via email)
+Edit actions on detail page: change role, change status (active/suspended/pending), update profile fields
+Delete/suspend user with confirmation
+Bulk actions: bulk suspend, bulk delete, bulk role change
+2. Users Detail (src/pages/users/[id].tsx)
+Currently has: Profile info, subscription, activity, team members, admin notes Missing (besides the App Router fix above):
+
+Edit button → inline editing of profile fields (name, email, role, status)
+Subscription management: link to subscription detail (from billing package), cancel/upgrade actions
+Impersonate user button (login as this user for debugging)
+Ban/suspend with reason field
+Delete user with confirmation (cascade handling explained)
+3. Audit Log (src/pages/audit-log.tsx)
+Currently has: Search, action/resource/date filters, expandable rows with JSON details Missing:
+
+Column sorting (add to: Action, Resource, User, IP, Timestamp)
+Export CSV button
+Note: This is intentionally read-only — no CRUD needed. Audit logs should never be editable or deletable.
+4. Revenue (src/pages/revenue.tsx)
+Currently has: MRR/ARR stat cards, revenue chart, transaction table with search/date filter, Export CSV Missing:
+
+Column sorting on transaction table (User, Plan, Amount, Status, Date)
+Clickable rows → subscription detail view (will come from musekit-billing's SubscriptionDetail component)
+Filter by plan tier and status
+5. Customer Service (src/pages/customer-service.tsx)
+Currently has: Two tabs (Profiles, Tickets), search, status/priority filters, expandable tickets, ticket response form, admin notes Missing:
+
+Column sorting on both tabs
+Create ticket: "New Ticket" button → form with user selector, subject, description, priority, category
+Full ticket detail page: Click row → dedicated page showing:
+Ticket info (subject, description, status, priority, category, ticket number)
+Full comment thread (from ticket_comments table) with timestamps and author
+Reply form (add comment)
+Internal notes (visible only to admins, is_internal = true)
+Status change dropdown
+Priority change dropdown
+Assign to admin dropdown
+Close/Reopen actions
+Delete ticket with confirmation
+Bulk actions: Bulk close, bulk assign, bulk change priority
+6. Feature Toggles (src/pages/feature-toggles.tsx)
+Data storage: There is NO feature_toggles table in the database. Feature toggles are stored as key/value rows in the settings table using a feature. key prefix (e.g., key=feature.googleAuth, value=true). Query the settings table filtered by keys starting with feature. to list all toggles. Create/edit/delete toggles by inserting/updating/deleting rows in settings with the feature. key prefix. The existing page already uses this pattern — verify and maintain it.
+
+Currently has: Search, create toggle, enable/disable toggle Missing:
+
+Column sorting
+Edit form: Click a feature toggle to edit its name, key, description, category
+Delete with confirmation dialog
+Filter by category
+Clickable rows → expand to show description, key, last modified
+7. Onboarding (src/pages/onboarding.tsx)
+Currently: "Coming Soon" placeholder stub — the entire page needs to be built.
+
+Build a real onboarding analytics dashboard:
+
+Funnel visualization: Show conversion rates between stages (Signup → Email Verified → First Login → Profile Complete → First Action → Subscribed)
+Stage breakdown cards: For each stage, show: count of users, conversion rate from previous stage, average time to reach this stage
+User list per stage: Click a stage → see the users currently at that stage, with ability to click through to user detail
+Time-series chart: Show daily signups and conversion rates over time (last 30/60/90 days)
+Drop-off analysis: Highlight where users are getting stuck
+Data source note: The onboarding_state and onboarding_events tables exist in Supabase but their column structure is undocumented. Do NOT depend on them as a primary data source. Build the funnel visualization using data inferred from documented tables: profiles.created_at (signup timestamp), profiles.last_sign_in_at (login tracking), audit_logs (action tracking — query by user_id and action type), muse_product_subscriptions (subscription status/conversions). If onboarding_state/onboarding_events tables turn out to have usable columns, check them at runtime and incorporate if available — but the dashboard must work fully without them.
+8. Settings (src/pages/settings.tsx)
+Currently: "Coming Soon" placeholder stub — the entire page needs to be built.
+
+Build a system settings management page:
+
+General settings: App name, support email, default timezone, default language
+Security settings: Session timeout, max login attempts, password requirements
+Notification settings: Email notifications on/off for various events (new user, new ticket, subscription change)
+Maintenance mode: Toggle to enable/disable app access with custom message
+Data export: Button to export all system data as JSON
+Danger zone: Reset settings to defaults (with confirmation), clear cache
+All settings persist to the settings table via useSettings hook
+9. Setup: Branding (src/pages/setup/branding.tsx)
+Currently has: App name, description, logo URL (text input), hero style selector, color pickers Missing:
+
+Logo upload: The Upload button next to "Logo URL" must actually work:
+<input type="file" accept="image/*"> triggered by the button
+Upload to Supabase Storage assets/branding/ folder
+Show upload progress
+Display preview of uploaded logo
+Save the public URL to settings
+Favicon upload: Same upload pattern for favicon
+Image previews: Show current logo/favicon inline when URLs are set
+10. Setup: Pages (src/pages/setup/pages.tsx) — NEW PAGE
+WHY THIS MATTERS: The page builder is MuseKit's white-label branding engine. This is the feature that makes MuseKit a rapid-deployment SaaS platform. A new MuseKit deployment opens the admin, configures their brand and pages — hero text, testimonials, feature descriptions, screenshots, founder story — and launches a fully branded product without touching code. Every section on every page must be editable from this admin UI. The homepage is just one page in this system.
+
+Data model: All pages (including the homepage) are stored in the site_pages table. Each row has a sections JSONB column containing an array of SectionConfig objects (same structure as the current default-config.ts). The current content.tsx page that manages homepage sections via the settings table is being replaced by this unified page management system.
+
+Pages List View
+Table showing all site_pages rows with columns: Title, Slug, Status (badge: Draft=gray, Review=yellow, Published=green), Section Count, Show in Nav, Last Edited By, Last Updated
+Standard sort/search/filter (same standards as all other admin tables)
+"New Page" button → form with: title, slug (auto-generated from title with kebab-case, editable), description (for SEO meta), show_in_nav toggle. Creates row in site_pages with empty sections array, status='draft'.
+Page Row Actions
+Click row → opens page detail/edit view
+Preview: Eye icon on each row opens /<slug> in a new browser tab. For unpublished pages (status != 'published'), append ?preview=true to the URL so DynamicPage renders the page even though it's not public yet (preview mode is admin-only, verified server-side).
+Duplicate: Copy icon duplicates the page: creates a new site_pages row with title="[Title] (Copy)", auto-generated slug (e.g., about-copy), same sections JSONB, status='draft'. Opens the new page's editor after creation.
+Edit metadata: title, slug, description, show_in_nav, status dropdown (Draft → Review → Published)
+Status workflow: Replace simple published toggle with a status dropdown showing three states:
+Draft (gray badge) — only admins can see (via preview mode)
+Review (yellow badge) — ready for review, still not public
+Published (green badge) — visible to the public
+Only "Published" status makes the page visible to public visitors via DynamicPage
+"Last edited by": Show updated_by user's name + updated_at relative time on each row. Format: "Sarah, 2h ago". When any admin saves a page, set updated_by to their user ID and updated_at to now().
+Delete page: trash icon with confirmation. The homepage (slug="home") cannot be deleted — disable/hide the delete button for it.
+"Edit Sections" button → opens the section editor for that page (see below)
+Page-Level SEO Editor
+Add an SEO tab or panel to each page's detail/edit view. This appears alongside the metadata editor and section editor:
+
+SEO Title (text input) — Override for <title> tag, separate from the display title. Allows SEO-optimized titles like "Best SaaS Starter Kit 2026 | MuseKit". Character counter showing current/recommended (50–60 chars). Stored in site_pages.seo_title.
+
+Meta Description (textarea) — Override meta description for search engines. Character counter showing current/recommended (120–160 chars). Stored in site_pages.seo_description.
+
+OG Image (ImageUpload component) — Social sharing card image. When shared on Twitter/LinkedIn/Facebook, this image appears. Stored in site_pages.og_image.
+
+Focus Keyword (text input) — The primary keyword/phrase this page targets. Used by the SEO score preview (below). Stored in site_pages.focus_keyword.
+
+Canonical URL (text input) — Defaults to /<slug> (shown as placeholder). Editable for cross-domain canonical overrides. Stored in site_pages.canonical_url.
+
+No-Index Toggle — When enabled, search engines are told not to index this page. Useful for staging or internal pages. Stored in site_pages.no_index.
+
+SEO Score Preview — A real-time traffic-light indicator panel that shows SEO health:
+
+Title length: green (50–60 chars), yellow (outside range), red (missing)
+Meta description length: green (120–160 chars), yellow (outside range), red (missing)
+Focus keyword in title: green (present) / red (missing)
+Focus keyword in meta description: green (present) / red (missing)
+OG image set: green / red
+H1 present: green if the page has a hero section with a headline / red if not (check sections JSONB for a hero type with props.headline)
+Overall score: count of green items out of 6, shown as "SEO Score: 5/6"
+All SEO fields are saved to the site_pages row alongside other page metadata. The getPageMetadata() function in the CMS package (prompt 11) reads these fields to generate server-side SEO metadata.
+
+Section Editor (per page)
+When you click "Edit Sections" on any page, you enter the section editor for that page. This is a refactored version of the current content.tsx, but loading/saving from that page's site_pages.sections JSONB column instead of the settings table.
+
+Section list controls (same as current content.tsx):
+
+Enable/disable toggles per section
+Reorder (up/down or drag)
+Background color picker per section
+"Add Section" button at the bottom — dropdown of all 13 section types to add a new section to this page
+"Remove Section" button on each section — with confirmation
+"Edit Content" button on each section — opens a modal or expands an editor panel with section-type-specific fields:
+
+1. Hero section editor:
+
+Headline (text input)
+Subtitle (text input)
+CTA button text (text input)
+CTA button URL (text input)
+Secondary CTA text (text input)
+Secondary CTA URL (text input)
+Background image (ImageUpload component)
+Hero style selector (dropdown: pattern, gradient, image, etc.)
+2. Feature Cards editor:
+
+Section title (text input)
+Section subtitle (text input)
+Columns count (number: 2, 3, or 4)
+List of features, each with: icon selector (Lucide icon name), title, description
+Add/remove feature cards
+Reorder cards (drag or up/down buttons)
+3. Testimonial Carousel editor:
+
+List of testimonials, each with: quote (textarea), name, role, company, avatar (ImageUpload)
+Add/remove testimonials
+Reorder
+4. Process Steps editor:
+
+Section title (text input)
+Section subtitle (text input)
+List of steps, each with: title (text), description (text)
+Add/remove/reorder steps
+5. FAQ editor:
+
+Section title (text input)
+List of Q&A pairs, each with: question (text), answer (textarea)
+Add/remove/reorder questions
+6. Bottom Hero CTA editor:
+
+Headline (text input)
+Subtitle (text input)
+CTA button text (text input)
+CTA button URL (text input)
+7. Logo Marquee editor:
+
+List of logos, each with: image (ImageUpload), alt text
+Add/remove logos
+Reorder
+8. Animated Counters editor:
+
+List of counters, each with: label (text), value (number), suffix (optional text, e.g. "+", "%", "k"), prefix (optional text, e.g. "$")
+Add/remove/reorder counters
+9. Founder Letter editor:
+
+Portrait (ImageUpload)
+Name (text input)
+Title/role (text input)
+Letter body (textarea — multi-line)
+Signature (optional ImageUpload)
+10. Comparison Bars editor:
+
+Section title (text input)
+Section subtitle (text input)
+"Before" label (text input, default "Before")
+"After" label (text input, default "After")
+List of comparisons, each with: label (text), before value (number), after value (number), unit (optional text, e.g. "hours", "days")
+Add/remove/reorder comparisons
+11. Screenshot Showcase editor:
+
+Section title (text input)
+Section subtitle (text input)
+List of screenshots, each with: image (ImageUpload to Supabase Storage assets/screenshots/), alt text, caption (optional text)
+Add/remove/reorder screenshots
+12. Image Collage editor:
+
+List of images (max 5), each with: image (ImageUpload to Supabase Storage assets/collage/), alt text
+Add/remove/reorder images
+13. Image Text Blocks editor:
+
+List of blocks, each with: image (ImageUpload), headline (text), description (textarea), layout (dropdown: "image-left" or "image-right")
+Add/remove/reorder blocks
+14. Pricing section editor (NOTE: there is no pricing component in LandingPageBuilder yet — this editor should only appear if/when a PricingSection component is added to the CMS package. For now, do NOT include "pricing" in the "Add Section" dropdown. If a pricing section type is added to LandingPageBuilder in the future, the editor fields are):
+
+Toggle: pull from billing config automatically, or use custom content
+Custom mode: plan cards with name, price, features list, CTA text, CTA URL
+Add/remove plan cards
+Note on Feature Sub-Pages: The feature-sub-page type in LandingPageBuilder is NOT a configurable section — it loads content from the posts table by slug. Do NOT include it in the "Add Section" dropdown. If a page has a feature-sub-page section, display a read-only note: "Feature sub-pages are managed in the Blog/CMS admin" with a link to /admin/cms/blog.
+
+Live preview: Show a miniature preview of the section as content is edited (optional but ideal — even a simplified rendering is helpful)
+Save per section: Each section editor saves its props back to the page's sections JSONB array in site_pages. Save the entire sections array on each edit (not per-key like settings).
+Homepage Migration
+The current content.tsx (src/pages/setup/content.tsx) should be replaced or refactored. It currently manages homepage sections via the settings table under the content.sections key. Replace this with a redirect to the new Pages management that opens the homepage (slug="home") section editor directly. Or replace the page entirely to load from site_pages where slug='home'.
+STANDARD D: Image Upload Integration
+Build or integrate an image upload system that works across the admin:
+
+ImageUpload component (if not importing from musekit-cms):
+
+Supabase Storage integration (bucket: assets)
+Drag-and-drop zone + file picker button
+Accept: image/png, image/jpeg, image/gif, image/webp, image/svg+xml
+Max size: 5MB
+Shows upload progress bar
+Shows preview of current/uploaded image
+Returns public URL via onChange callback
+Props: value, onChange, folder (for organizing: branding/, sections/, testimonials/, etc.)
+Use this component everywhere an image URL input exists:
+
+Branding: logo, favicon
+Content sections: hero image, testimonial avatars, feature icons, CTA backgrounds, logo marquee
+Blog: post featured images (if applicable)
+STANDARD E: UX Standards (applies to ALL modules)
+These standards apply to every component built in this module AND to all other module Repls (10, 11, 12, 13, 14). This is the canonical definition — other prompts cross-reference this section.
+
+E1. Toast Notifications
+Install sonner (toast notification library)
+Every create, update, and delete operation must show a toast on success: toast.success("Page created") or toast.error("Failed to save")
+No silent mutations — the user must always see feedback
+Wrap the app with <Toaster /> from sonner (export a ToastProvider component for the integration Repl to mount)
+E2. Empty States
+Build a reusable EmptyState component with props: icon (Lucide icon), title, description, actionLabel, onAction
+Every list/table view with zero rows must show EmptyState instead of an empty table
+Examples: "No users yet" with user icon, "No pages created" with file icon + "Create your first page" CTA button
+Export from src/components/ui/EmptyState.tsx and src/index.ts
+E3. Confirmation Dialog
+Build a reusable ConfirmDialog component (modal) with props: open, onConfirm, onCancel, title, message, confirmText, cancelText, destructive (boolean — turns confirm button red)
+All delete operations and destructive actions (suspend user, cancel subscription, etc.) must use ConfirmDialog
+Never delete on a single click — always require explicit confirmation
+Export from src/components/ui/ConfirmDialog.tsx and src/index.ts
+E4. Dark Mode
+All new UI must work in both light and dark mode
+Use Tailwind dark: variant classes for all colors, backgrounds, borders, and text
+Test both modes — no white-on-white or black-on-black text
+Follow the existing shadcn/ui CSS variable theme system (HSL-based --background, --foreground, etc.)
+E5. Loading Skeletons
+Every page that fetches data must show Skeleton placeholder elements while loading
+No blank pages, no layout jumps — skeleton shapes should match the final layout (table rows, cards, stat cards)
+Use the existing shadcn Skeleton component or build a matching one
+Show skeletons for at least: table rows (5-10 rows), stat cards, chart areas, form fields
+E6. Unsaved Changes Warning
+Build a reusable useUnsavedChanges(isDirty: boolean) hook
+When isDirty is true and the user tries to navigate away or close the tab, show a browser-native beforeunload confirmation dialog
+Apply to every form that edits data: settings, page editor, user editor, campaign editor, etc.
+Reset isDirty after successful save
+E7. Form Validation
+All forms must validate required fields client-side before submission
+Show inline field-level error messages in red below the input (e.g., "Title is required", "Invalid URL format")
+Disable the submit button while the form has validation errors
+Validate on blur (field loses focus) and on submit
+Common validations: required, email format, URL format, min/max length, number range
+E8. Relative Timestamps
+Use the existing timeAgo() utility function for all timestamp display
+Show relative time as primary: "2 hours ago", "3 days ago", "just now"
+Show full date/time on hover as a tooltip: title="March 5, 2026 at 2:34 PM"
+Apply to: created_at, updated_at, last_sign_in_at, sent_at, and all other timestamp columns
+E9. Row Counts
+Every list page title must include the total row count in parentheses
+Format: "Users (47)", "Pages (5)", "Tickets (12)", "Templates (7)"
+Update the count dynamically as filters are applied: "Users (12 of 47)"
+The count should reflect total matching rows, not just the current page
+E10. Breadcrumbs
+Every detail/drill-down page must show breadcrumbs at the top
+Use the existing Breadcrumb component (or build one if it doesn't exist)
+Pattern: Admin > Users > John Doe, Admin > Setup > Pages > About Us > Edit Sections
+Breadcrumb items are links back to their parent pages
+Admin Sidebar Redesign — Vercel-Style Drill-In Navigation
+The current flat sidebar must be replaced with a Vercel-style drill-in navigation pattern. This is a core UX pattern used across both the admin dashboard and (later) the user dashboard.
+
+Navigation Pattern
+Primary view: Shows only top-level nav items. Items that contain sub-pages display a > (ChevronRight) icon on the right side of the row.
+
+Sub-menu view: When a top-level item with children is clicked, the entire sidebar content is replaced with:
+
+A back row at the top: ← Section Name (ArrowLeft icon + label) — clicking returns to the primary view
+The sub-items listed below, each as a normal nav link
+Auto-detection: The sidebar reads usePathname() on mount. If the current URL matches a sub-section prefix (e.g., /admin/setup/branding starts with /admin/setup), auto-expand that section's sub-menu. This ensures deep-links and page refreshes show the correct sub-menu.
+
+Search: A search/filter input at the top of the sidebar filters the currently visible items (top-level or sub-menu items). Use lucide-react Search icon. Filter is client-side, case-insensitive, matching on label text.
+
+Full Navigation Structure
+Top-level items (no sub-menu):
+
+Label	Route	Icon (Lucide)
+Overview	/admin	LayoutDashboard
+Users	/admin/users	Users
+Metrics	/admin/metrics	BarChart3
+Audit Log	/admin/audit-log	ScrollText
+Revenue	/admin/revenue	DollarSign
+Customer Service	/admin/customer-service	Headset
+Onboarding	/admin/onboarding	TrendingUp
+Top-level items WITH sub-menus (show > chevron):
+
+Parent	Sub-Items	Routes	Icons
+Setup (Sliders)	Branding	/admin/setup/branding	Palette
+Pages	/admin/setup/pages	Layout
+Feature Toggles	/admin/feature-toggles	ToggleLeft
+Affiliates (Users2)	Overview	/admin/affiliates	LayoutDashboard
+Members	/admin/affiliates/members	Users
+Applications	/admin/affiliates/applications	FileText
+Tiers	/admin/affiliates/tiers	Layers
+Broadcasts	/admin/affiliates/broadcasts	Megaphone
+Assets	/admin/affiliates/assets	Image
+Milestones	/admin/affiliates/milestones	Trophy
+Contests	/admin/affiliates/contests	Award
+Payout Runs	/admin/affiliates/payout-runs	Banknote
+Discount Codes	/admin/affiliates/discount-codes	Percent
+Networks	/admin/affiliates/networks	Network
+Settings	/admin/affiliates/settings	Settings
+Email (Mail)	Templates	/admin/setup/email	FileEdit
+Campaigns	/admin/campaigns	Send
+Services (Server)	Webhooks	/admin/webhooks	Webhook
+Jobs	/admin/jobs	Clock
+Bottom section (separated by a divider/border-t):
+
+Label	Route	Icon
+Settings	/admin/settings	Settings
+Component Architecture
+Refactor AdminSidebar (src/layout/AdminSidebar.tsx):
+
+interface NavItem {
+  label: string;
+  href: string;
+  icon: LucideIcon;
+}
+interface SubMenu {
+  label: string;
+  icon: LucideIcon;
+  prefix: string; // URL prefix for auto-detection (e.g., "/admin/setup")
+  items: NavItem[];
+}
+interface NavConfig {
+  topLevel: NavItem[];
+  subMenus: SubMenu[];
+  bottom: NavItem[];
+}
+State management:
+
+activeSubMenu: string | null — the key of the currently open sub-menu, or null for primary view
+Derived from usePathname() on mount: loop through subMenus, check if pathname.startsWith(subMenu.prefix) — if so, set activeSubMenu to that key
+Clicking a parent item with children sets activeSubMenu; clicking the back arrow clears it
+Rendering logic:
+
+if (activeSubMenu) {
+  render: ← back row (← {subMenu.label})
+  render: subMenu.items (filtered by search)
+} else {
+  render: topLevel items (filtered by search)
+  render: subMenu parent items with > chevron (filtered by search)
+  render: --- divider ---
+  render: bottom items
+}
+Active item highlighting:
+
+Exact match (pathname === item.href) or prefix match (pathname.startsWith(item.href + "/")) — same as current
+For parent items in primary view: highlight if any child route matches the current pathname
+Collapsed mode:
+
+When sidebar is collapsed (icons only), clicking an icon that has children opens a popover/tooltip with the sub-menu items
+Back arrow is not needed in collapsed mode — just show the parent section icon
+Styling:
+
+Match existing dark theme: bg-card, border-r, text colors from current theme
+Back row: text-muted-foreground hover:text-foreground, font-medium, with ArrowLeft icon
+Parent items with children: show ChevronRight icon at ml-auto position, text-muted-foreground
+Search input: compact, borderless, with Search icon prefix, placeholder="Find...", text-sm
+User Dashboard (User-Facing — NOT admin)
+Build a UserDashboard component that serves as the logged-in user's home screen. This is NOT an admin page — it's what regular users see at /dashboard.
+
+Components:
+Subscription Status Card:
+
+Plan name and tier badge (Starter/Basic/Premium/Free)
+Status badge (Active, Trialing, Past Due, Canceled)
+Next billing date (from muse_product_subscriptions.current_period_end)
+Usage metrics if applicable (API calls, storage, etc.)
+"Manage Subscription" button → links to Stripe customer portal or pricing page
+Notification Feed:
+
+Query notifications table filtered to current user
+Show unread count badge on the section header
+List recent notifications: icon, message, timestamp (relative), read/unread indicator
+Click notification → mark as read + navigate to relevant page
+"Mark all as read" action
+Recent Activity Timeline:
+
+Query audit_logs filtered to current user's user_id
+Show last 10 actions: action description, resource, timestamp (relative)
+Vertical timeline layout with icons per action type
+Quick Action Buttons:
+
+Configurable grid of shortcut buttons (e.g., "Create Post", "View Analytics", "Get Help")
+Each button has: icon, label, href
+Products can customize these via settings
+Getting Started Checklist (for new users):
+
+Show a progress checklist for onboarding steps:
+Profile complete? (check if full_name and avatar_url are set in profiles)
+Email verified? (check Supabase Auth user metadata email_confirmed_at)
+First action completed? (check audit_logs for any row with this user's ID)
+Subscription active? (check muse_product_subscriptions for active/trialing status)
+Table note: The onboarding_state and onboarding_events tables exist in Supabase but their column structure is undocumented. Do NOT depend on them. Instead, infer all checklist states from the documented tables listed above (profiles, audit_logs, muse_product_subscriptions, Supabase Auth metadata).
+Progress bar showing X of Y complete
+Each incomplete step has a CTA button to complete it
+Hide the checklist once all steps are done (or allow user to dismiss)
+Export UserDashboard from src/index.ts.
+
+User Profile & Account Settings (User-Facing)
+Build a UserProfileSettings component that allows any logged-in user to manage their own profile. This is NOT an admin page — it's the user's account settings.
+
+UserProfileSettings component (src/pages/account/settings.tsx)
+Avatar Upload:
+
+Use the ImageUpload component (same as branding/section uploads) to upload to Supabase Storage assets/avatars/ folder
+Show current avatar as a circle preview (128px)
+On upload, save the public URL to profiles.avatar_url for the current user
+If no avatar is set, show initials fallback (same as AdminHeader behavior)
+Display Name:
+
+Text input bound to profiles.full_name
+Shows current value, editable
+Required field — validate not empty
+Email:
+
+Read-only display of current email from Supabase Auth
+Email changes require the Supabase Auth email change flow (sends confirmation to both old and new addresses) — do NOT allow direct editing. Show a "Change email" link that triggers supabase.auth.updateUser({ email: newEmail }) with a separate confirmation modal.
+Password Change:
+
+"Change Password" button that triggers Supabase Auth password reset flow
+Opens a form with: current password (optional, for security), new password, confirm new password
+Or sends a password reset email via supabase.auth.resetPasswordForEmail()
+Save Button:
+
+Updates profiles table with new full_name and avatar_url
+Shows toast on success ("Profile updated") or error
+Apply useUnsavedChanges hook
+Danger Zone:
+
+"Delete my account" button with ConfirmDialog (destructive variant)
+Confirmation message: "This will permanently delete your account and all associated data. This cannot be undone."
+Actual deletion should call a server-side function that handles cascade cleanup (subscriptions, data, etc.)
+Apply all STANDARD E requirements (unsaved changes warning, form validation, dark mode, toast, loading skeleton while fetching profile).
+
+Export UserProfileSettings from src/index.ts.
+
+Avatar in App Header
+The existing AdminHeader already displays the user's avatar from profiles.avatar_url. The main app header (apps/web/src/components/header.tsx) must also show the logged-in user's avatar. Add a user menu in the top-right:
+
+Avatar circle (from profiles.avatar_url, with initials fallback)
+Click → dropdown menu with: "Account Settings" (→ /account/settings), "Dashboard" (→ /dashboard), divider, "Sign Out"
+When not logged in, show "Login" / "Sign Up" buttons instead
+Integration Rules
+All components must use "use client" directive where they use hooks/state
+All imports must use relative paths (NOT @/ aliases)
+Use next/navigation (NOT next/router) for ALL routing — useRouter, usePathname, useParams, useSearchParams
+All admin page links must use /admin/ prefix (e.g., /admin/users, /admin/setup/branding)
+Data access pattern: For pages that currently use fetch("/api/admin/...") API routes, keep that pattern. For NEW functionality, prefer using the Supabase client directly via the existing getSupabaseClient() / createSupabaseAdmin() from src/lib/supabase.ts. This avoids dependency on API route wiring in the integration Repl.
+Export all new components from src/index.ts
+Use existing UI components (Card, Button, Input, Table, Badge, etc.) from src/components/ui/
+After Fix
+Push to GitHub. The integration Repl will pull the updated src/ files.
+
+Integration Repl wiring needed for Pages:
+Update apps/web/src/app/page.tsx (homepage): Change from getLandingConfig() to using the HomePageLoader component from @musekit/cms (see prompt 11). This component loads sections from site_pages where slug='home', with a fallback to the static defaultLandingConfig if no homepage row exists yet.
+Create apps/web/src/app/[slug]/page.tsx: Catch-all route that uses the DynamicPage component from @musekit/cms to render any published page by slug. Must handle the case where slug matches an existing route (admin, blog, login, etc.) — only render from site_pages if no other route matches.
+Update apps/web/src/components/header.tsx: Replace hardcoded nav links (Features, Pricing, Docs) with dynamic navigation from the SiteNav component exported by @musekit/cms, which queries site_pages where show_in_nav=true and status='published', ordered by sort_order.
+Route conflict note: The existing features/[slug] route loads feature sub-pages from the posts table. Keep it for backward compatibility. The new [slug]/page.tsx should check site_pages first; if no matching page is found, return 404 (Next.js will fall through to not-found.tsx).
+Create apps/web/src/app/account/settings/page.tsx: Renders UserProfileSettings from @musekit/admin. This is the user-facing profile/account settings page with avatar upload.
+Update apps/web/src/components/header.tsx: Add logged-in user avatar + dropdown menu (Account Settings, Dashboard, Sign Out) in the top-right. When not logged in, show Login/Sign Up buttons.

@@ -1,0 +1,16 @@
+These are all reasonable questions. Here are my answers to each concern:
+
+1. App Router vs Pages Router conflict — This is the expected pattern. The module Repl runs on Pages Router locally, but the code will be integrated into the App Router monorepo here. The prompt says to make the changes now — the module Repl code won't run standalone after this; it's being prepared for integration. The agent should make the next/navigation changes as instructed. If the module Repl can't run locally after the change, that's fine — it only needs to compile and work once pulled into the integration Repl.
+
+2. Missing site_pages table — I already handled this.  You are not referencing current data.
+
+3. Sidebar references non-existent pages — The sidebar should include ALL nav items from the spec, even if the destination pages don't exist yet. Those pages will be built by other module Repls (prompts 10, 13, 14). The sidebar is the single source of truth for navigation structure. Links to not-yet-built pages will simply show a 404 or empty page until those modules are integrated — that's expected.
+
+4. User-facing components (UserDashboard, UserProfileSettings, Avatar) — Yes, these are intentionally in the admin package. The admin package owns all authenticated user management components, including user-facing ones. The layout difference (admin layout vs user layout) is handled at the integration Repl level — the components themselves don't include layout wrappers. The integration Repl wires UserDashboard into /dashboard (user layout) and UserProfileSettings into /account/settings (user layout), separate from the /admin/* routes.
+
+5. Phased approach — Absolutely fine. Breaking into 2-3 phases is smart. Suggest this ordering:
+
+Phase 1: Critical Fix A + Standards B/C/D/E + page rebuilds (foundations)
+Phase 2: New pages (Onboarding, Settings, Pages/CMS builder) + sidebar redesign
+Phase 3: User-facing components (UserDashboard, UserProfileSettings, Avatar)
+You can paste these answers back to the module Repl agent and let it proceed. Want me to format this as a ready-to-paste response?
