@@ -106,13 +106,18 @@ export interface AlertThreshold {
 export interface SupportTicket {
   id: string;
   user_id: string;
-  user_email: string;
+  user_email?: string;
+  assigned_to?: string;
   subject: string;
-  message: string;
+  description: string;
   status: "open" | "in_progress" | "resolved" | "closed";
   priority: "low" | "medium" | "high" | "urgent";
+  category?: string;
+  ticket_number?: string;
   nps_score?: number;
   admin_response?: string;
   created_at: string;
   updated_at: string;
+  resolved_at?: string;
+  closed_at?: string;
 }

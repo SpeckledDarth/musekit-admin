@@ -18,6 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate, formatCurrency, timeAgo } from "@/lib/utils";
+import { downloadCSV } from "@/lib/csv-export";
 import {
   HeadsetIcon,
   Search,
@@ -31,6 +32,7 @@ import {
   ChevronDown,
   ChevronUp,
   Save,
+  Download,
 } from "lucide-react";
 import type { Profile, Subscription, SupportTicket } from "@/types";
 
@@ -97,8 +99,8 @@ function SupportTicketsTab() {
   const filteredTickets = tickets.filter((t) => {
     const matchesSearch =
       t.subject.toLowerCase().includes(search.toLowerCase()) ||
-      t.user_email.toLowerCase().includes(search.toLowerCase()) ||
-      t.message.toLowerCase().includes(search.toLowerCase());
+      (t.user_email || "").toLowerCase().includes(search.toLowerCase()) ||
+      t.description.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     const matchesPriority = priorityFilter === "all" || t.priority === priorityFilter;
     return matchesSearch && matchesStatus && matchesPriority;
@@ -234,6 +236,25 @@ function SupportTicketsTab() {
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
             </Select>
+            <Button
+              variant="outline"
+              onClick={() =>
+                downloadCSV(filteredTickets, "tickets-export", [
+                  { key: "id", label: "ID" },
+                  { key: "subject", label: "Subject" },
+                  { key: "user_email", label: "User Email" },
+                  { key: "status", label: "Status" },
+                  { key: "priority", label: "Priority" },
+                  { key: "description", label: "Message" },
+                  { key: "nps_score", label: "NPS Score" },
+                  { key: "created_at", label: "Created" },
+                ])
+              }
+              disabled={loading || filteredTickets.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
           </div>
 
           {loading ? (
@@ -313,7 +334,7 @@ function SupportTicketsTab() {
                               <div>
                                 <p className="text-sm font-medium mb-1">User Message</p>
                                 <p className="text-sm text-muted-foreground bg-background p-3 rounded-md border">
-                                  {ticket.message}
+                                  {ticket.description}
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-1">
                                   {timeAgo(ticket.created_at)}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
 import { SetupLayout } from "@/layout/SetupLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSettings } from "@/hooks/useSettings";
 import { MessageSquare, Plus, Trash2, ChevronUp, ChevronDown, Star, Check } from "lucide-react";
 
 interface Testimonial {
@@ -16,82 +15,134 @@ interface Testimonial {
   role: string;
   company: string;
   quote: string;
-  avatarUrl: string;
+  avatar_url: string;
   rating: number;
   approved: boolean;
   featured: boolean;
 }
 
-function generateId() {
-  return Math.random().toString(36).substring(2, 10);
-}
-
-const emptyTestimonial: Omit<Testimonial, "id"> = {
-  name: "",
-  role: "",
-  company: "",
-  quote: "",
-  avatarUrl: "",
-  rating: 5,
-  approved: false,
-  featured: false,
-};
-
 export default function TestimonialsPage() {
-  const { getSetting, updateSetting, saveSettings, loading, saving } =
-    useSettings("testimonials");
   const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading) {
-      const stored = getSetting("data", "[]");
-      try {
-        setTestimonials(JSON.parse(stored));
-      } catch {
-        setTestimonials([]);
-      }
+  const fetchTestimonials = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/setup/testimonials");
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      setTestimonials(data.testimonials || []);
+    } catch (error) {
+      console.error("Error fetching testimonials:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [loading, getSetting]);
+  }, []);
 
-  function persistTestimonials(updated: Testimonial[]) {
-    setTestimonials(updated);
-    updateSetting("data", JSON.stringify(updated));
+  useEffect(() => {
+    fetchTestimonials();
+  }, [fetchTestimonials]);
+
+  async function addTestimonial() {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/setup/testimonials", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "",
+          role: "",
+          company: "",
+          quote: "",
+          avatar_url: "",
+          rating: 5,
+          approved: false,
+          featured: false,
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to add");
+      const data = await res.json();
+      setTestimonials((prev) => [data.testimonial, ...prev]);
+      setEditingId(data.testimonial.id);
+    } catch (error) {
+      console.error("Error adding testimonial:", error);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function addTestimonial() {
-    const newItem: Testimonial = { ...emptyTestimonial, id: generateId() };
-    const updated = [...testimonials, newItem];
-    persistTestimonials(updated);
-    setEditingId(newItem.id);
-  }
-
-  function updateTestimonial(id: string, field: keyof Testimonial, value: string | number | boolean) {
-    const updated = testimonials.map((t) =>
-      t.id === id ? { ...t, [field]: value } : t
+  async function updateTestimonial(id: string, field: keyof Testimonial, value: string | number | boolean) {
+    setTestimonials((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, [field]: value } : t))
     );
-    persistTestimonials(updated);
   }
 
-  function deleteTestimonial(id: string) {
+  async function saveTestimonial(id: string) {
+    const testimonial = testimonials.find((t) => t.id === id);
+    if (!testimonial) return;
+    setSaving(true);
+    try {
+      await fetch("/api/admin/setup/testimonials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(testimonial),
+      });
+    } catch (error) {
+      console.error("Error saving testimonial:", error);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteTestimonial(id: string) {
     if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
-    const updated = testimonials.filter((t) => t.id !== id);
-    persistTestimonials(updated);
-    if (editingId === id) setEditingId(null);
+    try {
+      await fetch("/api/admin/setup/testimonials", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      setTestimonials((prev) => prev.filter((t) => t.id !== id));
+      if (editingId === id) setEditingId(null);
+    } catch (error) {
+      console.error("Error deleting testimonial:", error);
+    }
+  }
+
+  async function toggleField(id: string, field: "approved" | "featured") {
+    const testimonial = testimonials.find((t) => t.id === id);
+    if (!testimonial) return;
+    const newValue = !testimonial[field];
+    setTestimonials((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, [field]: newValue } : t))
+    );
+    try {
+      await fetch("/api/admin/setup/testimonials", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, [field]: newValue }),
+      });
+    } catch (error) {
+      console.error("Error updating testimonial:", error);
+      setTestimonials((prev) =>
+        prev.map((t) => (t.id === id ? { ...t, [field]: !newValue } : t))
+      );
+    }
   }
 
   function moveUp(index: number) {
     if (index === 0) return;
     const updated = [...testimonials];
     [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
-    persistTestimonials(updated);
+    setTestimonials(updated);
   }
 
   function moveDown(index: number) {
     if (index === testimonials.length - 1) return;
     const updated = [...testimonials];
     [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
-    persistTestimonials(updated);
+    setTestimonials(updated);
   }
 
   const totalCount = testimonials.length;
@@ -133,14 +184,9 @@ export default function TestimonialsPage() {
               Manage customer testimonials displayed on your site.
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={addTestimonial} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Add Testimonial
-            </Button>
-            <Button onClick={saveSettings} disabled={saving} size="sm" variant="outline">
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+          <Button onClick={addTestimonial} size="sm" disabled={saving}>
+            <Plus className="h-4 w-4 mr-1" /> Add Testimonial
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -214,8 +260,8 @@ export default function TestimonialsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                               <Input
                                 placeholder="Avatar URL"
-                                value={testimonial.avatarUrl}
-                                onChange={(e) => updateTestimonial(testimonial.id, "avatarUrl", e.target.value)}
+                                value={testimonial.avatar_url}
+                                onChange={(e) => updateTestimonial(testimonial.id, "avatar_url", e.target.value)}
                               />
                               <div className="flex items-center gap-2">
                                 <span className="text-sm text-muted-foreground">Rating:</span>
@@ -239,7 +285,14 @@ export default function TestimonialsPage() {
                                 </div>
                               </div>
                             </div>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                saveTestimonial(testimonial.id);
+                                setEditingId(null);
+                              }}
+                            >
                               <Check className="h-4 w-4 mr-1" /> Done Editing
                             </Button>
                           </>
@@ -309,9 +362,7 @@ export default function TestimonialsPage() {
                         <div className="flex gap-2">
                           <button
                             type="button"
-                            onClick={() =>
-                              updateTestimonial(testimonial.id, "approved", !testimonial.approved)
-                            }
+                            onClick={() => toggleField(testimonial.id, "approved")}
                             className="focus:outline-none"
                           >
                             <Badge variant={testimonial.approved ? "success" : "outline"}>
@@ -320,9 +371,7 @@ export default function TestimonialsPage() {
                           </button>
                           <button
                             type="button"
-                            onClick={() =>
-                              updateTestimonial(testimonial.id, "featured", !testimonial.featured)
-                            }
+                            onClick={() => toggleField(testimonial.id, "featured")}
                             className="focus:outline-none"
                           >
                             <Badge variant={testimonial.featured ? "default" : "outline"}>

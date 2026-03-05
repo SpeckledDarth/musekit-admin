@@ -7,21 +7,33 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Mail, Pencil, Send, X, Eye } from "lucide-react";
+import { Mail, Pencil, Send, X, Eye, Plus } from "lucide-react";
 
 interface EmailTemplate {
   id: string;
   name: string;
   subject: string;
-  body_html: string;
-  body_text: string;
+  body: string;
+  description: string;
+  category: string;
+  created_at: string;
   updated_at: string;
 }
+
+const EMPTY_TEMPLATE: Omit<EmailTemplate, "id" | "created_at" | "updated_at"> = {
+  name: "",
+  subject: "",
+  body: "",
+  description: "",
+  category: "general",
+};
 
 export default function EmailTemplatesSetup() {
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<EmailTemplate | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newTemplate, setNewTemplate] = useState(EMPTY_TEMPLATE);
   const [showPreview, setShowPreview] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
@@ -59,6 +71,24 @@ export default function EmailTemplatesSetup() {
     }
   };
 
+  const createTemplate = async () => {
+    if (!newTemplate.name) return;
+    try {
+      const res = await fetch("/api/admin/setup/email-templates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTemplate),
+      });
+      if (!res.ok) throw new Error("Failed to create");
+      const data = await res.json();
+      setTemplates((prev) => [...prev, data.template]);
+      setCreating(false);
+      setNewTemplate(EMPTY_TEMPLATE);
+    } catch (error) {
+      console.error("Error creating template:", error);
+    }
+  };
+
   const sendTestEmail = async () => {
     if (!testEmail || !editing) return;
     setSendingTest(true);
@@ -87,16 +117,98 @@ export default function EmailTemplatesSetup() {
       </Head>
       <SetupLayout>
         <div className="space-y-6 max-w-3xl">
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Mail className="h-6 w-6" /> Email Templates
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              Manage and customize email templates.
-            </p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold flex items-center gap-2">
+                <Mail className="h-6 w-6" /> Email Templates
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Manage and customize email templates.
+              </p>
+            </div>
+            {!editing && !creating && (
+              <Button size="sm" onClick={() => setCreating(true)}>
+                <Plus className="h-4 w-4 mr-1" /> New Template
+              </Button>
+            )}
           </div>
 
-          {editing ? (
+          {creating ? (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-lg">New Template</CardTitle>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setCreating(false);
+                        setNewTemplate(EMPTY_TEMPLATE);
+                      }}
+                    >
+                      <X className="h-4 w-4 mr-1" /> Cancel
+                    </Button>
+                    <Button size="sm" onClick={createTemplate} disabled={!newTemplate.name}>
+                      Create
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={newTemplate.name}
+                    onChange={(e) =>
+                      setNewTemplate({ ...newTemplate, name: e.target.value })
+                    }
+                    placeholder="e.g. Welcome Email"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Input
+                    value={newTemplate.description}
+                    onChange={(e) =>
+                      setNewTemplate({ ...newTemplate, description: e.target.value })
+                    }
+                    placeholder="Brief description of this template"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Category</label>
+                  <Input
+                    value={newTemplate.category}
+                    onChange={(e) =>
+                      setNewTemplate({ ...newTemplate, category: e.target.value })
+                    }
+                    placeholder="e.g. general, transactional, marketing"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Subject</label>
+                  <Input
+                    value={newTemplate.subject}
+                    onChange={(e) =>
+                      setNewTemplate({ ...newTemplate, subject: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Body</label>
+                  <Textarea
+                    value={newTemplate.body}
+                    onChange={(e) =>
+                      setNewTemplate({ ...newTemplate, body: e.target.value })
+                    }
+                    rows={10}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          ) : editing ? (
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -127,6 +239,25 @@ export default function EmailTemplatesSetup() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
+                  <label className="text-sm font-medium">Description</label>
+                  <Input
+                    value={editing.description || ""}
+                    onChange={(e) =>
+                      setEditing({ ...editing, description: e.target.value })
+                    }
+                    placeholder="Brief description of this template"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Category</label>
+                  <Input
+                    value={editing.category || ""}
+                    onChange={(e) =>
+                      setEditing({ ...editing, category: e.target.value })
+                    }
+                  />
+                </div>
+                <div>
                   <label className="text-sm font-medium">Subject</label>
                   <Input
                     value={editing.subject}
@@ -140,45 +271,25 @@ export default function EmailTemplatesSetup() {
                   <div className="border rounded-md p-4 bg-white min-h-[300px]">
                     <div
                       dangerouslySetInnerHTML={{
-                        __html: editing.body_html,
+                        __html: editing.body,
                       }}
                     />
                   </div>
                 ) : (
-                  <>
-                    <div>
-                      <label className="text-sm font-medium">
-                        HTML Body
-                      </label>
-                      <Textarea
-                        value={editing.body_html}
-                        onChange={(e) =>
-                          setEditing({
-                            ...editing,
-                            body_html: e.target.value,
-                          })
-                        }
-                        rows={12}
-                        className="font-mono text-xs"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">
-                        Plain Text Body
-                      </label>
-                      <Textarea
-                        value={editing.body_text}
-                        onChange={(e) =>
-                          setEditing({
-                            ...editing,
-                            body_text: e.target.value,
-                          })
-                        }
-                        rows={6}
-                        className="font-mono text-xs"
-                      />
-                    </div>
-                  </>
+                  <div>
+                    <label className="text-sm font-medium">Body</label>
+                    <Textarea
+                      value={editing.body}
+                      onChange={(e) =>
+                        setEditing({
+                          ...editing,
+                          body: e.target.value,
+                        })
+                      }
+                      rows={12}
+                      className="font-mono text-xs"
+                    />
+                  </div>
                 )}
 
                 <div className="border-t pt-4">
@@ -219,12 +330,24 @@ export default function EmailTemplatesSetup() {
                         className="flex items-center justify-between p-3 rounded-md border hover:bg-muted/50 transition-colors"
                       >
                         <div>
-                          <p className="text-sm font-medium">
-                            {template.name}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium">
+                              {template.name}
+                            </p>
+                            {template.category && (
+                              <Badge variant="secondary" className="text-xs">
+                                {template.category}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             Subject: {template.subject || "Not set"}
                           </p>
+                          {template.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {template.description}
+                            </p>
+                          )}
                         </div>
                         <Button
                           variant="ghost"

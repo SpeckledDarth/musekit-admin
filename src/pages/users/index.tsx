@@ -17,7 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
-import { Search, ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { downloadCSV } from "@/lib/csv-export";
+import { Search, ChevronLeft, ChevronRight, Eye, Download } from "lucide-react";
 import type { Profile } from "@/types";
 
 function computeHealthScore(profile: Profile): number {
@@ -125,11 +126,30 @@ export default function UserListPage() {
       </Head>
 
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">
-            Manage user accounts and permissions.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+            <p className="text-muted-foreground">
+              Manage user accounts and permissions.
+            </p>
+          </div>
+          <Button
+            onClick={() =>
+              downloadCSV(users, "users-export", [
+                { key: "id", label: "ID" },
+                { key: "full_name", label: "Name" },
+                { key: "email", label: "Email" },
+                { key: "role", label: "Role" },
+                { key: "status", label: "Status" },
+                { key: "created_at", label: "Created" },
+                { key: "last_sign_in_at", label: "Last Sign In" },
+              ])
+            }
+            disabled={loading || users.length === 0}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
         </div>
 
         <Card>

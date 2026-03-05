@@ -29,7 +29,7 @@ export default async function handler(
 
       const [subRes, activityRes, teamRes, notesRes, invitesRes] = await Promise.all([
         supabase
-          .from("subscriptions")
+          .from("muse_product_subscriptions")
           .select("*")
           .eq("user_id", id)
           .order("created_at", { ascending: false })
@@ -42,7 +42,7 @@ export default async function handler(
           .limit(20),
         profile?.organization_id
           ? supabase
-              .from("team_members")
+              .from("organization_members")
               .select("*")
               .eq("organization_id", profile.organization_id)
               .limit(50)
@@ -56,7 +56,7 @@ export default async function handler(
           .limit(50),
         profile?.organization_id
           ? supabase
-              .from("team_invites")
+              .from("invitations")
               .select("*")
               .eq("organization_id", profile.organization_id)
               .eq("status", "pending")
@@ -125,6 +125,9 @@ export default async function handler(
 
         const orgId = profileRes.data?.organization_id;
 
+        const token = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
         const inviteData = {
           id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
           organization_id: orgId || id,
@@ -133,10 +136,12 @@ export default async function handler(
           status: "pending",
           invited_by: admin.userId,
           created_at: new Date().toISOString(),
+          token,
+          expires_at: expiresAt,
         };
 
         if (orgId) {
-          await supabase.from("team_invites").insert(inviteData);
+          await supabase.from("invitations").insert(inviteData);
         }
 
         await supabase.from("audit_logs").insert({
@@ -154,7 +159,7 @@ export default async function handler(
         }
 
         await supabase
-          .from("team_members")
+          .from("organization_members")
           .update({ role })
           .eq("id", memberId);
 
@@ -173,7 +178,7 @@ export default async function handler(
         }
 
         await supabase
-          .from("team_members")
+          .from("organization_members")
           .delete()
           .eq("id", memberId);
 
@@ -192,7 +197,7 @@ export default async function handler(
         }
 
         await supabase
-          .from("team_invites")
+          .from("invitations")
           .delete()
           .eq("id", inviteId);
 

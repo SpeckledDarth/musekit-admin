@@ -19,14 +19,14 @@ export default async function handler(
 
     if (req.method === "GET") {
       const { data, error } = await supabase
-        .from("api_keys")
+        .from("config_secrets")
         .select("*")
-        .order("group", { ascending: true });
+        .order("key_name", { ascending: true });
       if (error) throw error;
 
       const masked = (data || []).map((key: Record<string, unknown>) => ({
         ...key,
-        value: key.value ? maskValue(key.value as string) : "",
+        encrypted_value: key.encrypted_value ? maskValue(key.encrypted_value as string) : "",
       }));
 
       res.status(200).json({ keys: masked });
@@ -35,16 +35,19 @@ export default async function handler(
 
       if (id) {
         const { error } = await supabase
-          .from("api_keys")
-          .update({ value, updated_at: new Date().toISOString() })
+          .from("config_secrets")
+          .update({
+            encrypted_value: value,
+            updated_at: new Date().toISOString(),
+            updated_by: admin.userId,
+          })
           .eq("id", id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("api_keys").insert({
-          label,
-          value,
-          group: "custom",
-          required: false,
+        const { error } = await supabase.from("config_secrets").insert({
+          key_name: label,
+          encrypted_value: value,
+          updated_by: admin.userId,
         });
         if (error) throw error;
       }
@@ -52,7 +55,7 @@ export default async function handler(
       res.status(200).json({ success: true });
     } else if (req.method === "DELETE") {
       const { id } = req.body;
-      const { error } = await supabase.from("api_keys").delete().eq("id", id);
+      const { error } = await supabase.from("config_secrets").delete().eq("id", id);
       if (error) throw error;
       res.status(200).json({ success: true });
     } else {

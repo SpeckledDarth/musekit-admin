@@ -17,7 +17,7 @@ export default async function handler(
     const supabase = createSupabaseAdmin();
 
     const { data: subscriptions } = await supabase
-      .from("subscriptions")
+      .from("muse_product_subscriptions")
       .select("*");
 
     const subs = subscriptions || [];

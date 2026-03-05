@@ -20,15 +20,47 @@ export default async function handler(
       if (error) throw error;
       res.status(200).json({ templates: data || [] });
     } else if (req.method === "POST") {
-      const { id, subject, body_html, body_text } = req.body;
+      const { id, subject, body, description, category } = req.body;
       const { error } = await supabase
         .from("email_templates")
         .update({
           subject,
-          body_html,
-          body_text,
+          body,
+          description,
+          category,
           updated_at: new Date().toISOString(),
         })
+        .eq("id", id);
+      if (error) throw error;
+      res.status(200).json({ success: true });
+    } else if (req.method === "PUT") {
+      const { name, subject, body, description, category } = req.body;
+      if (!name) {
+        return res.status(400).json({ error: "Template name is required" });
+      }
+      const { data, error } = await supabase
+        .from("email_templates")
+        .insert({
+          name,
+          subject: subject || "",
+          body: body || "",
+          description: description || "",
+          category: category || "general",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      res.status(201).json({ template: data });
+    } else if (req.method === "DELETE") {
+      const { id } = req.body;
+      if (!id) {
+        return res.status(400).json({ error: "Template id is required" });
+      }
+      const { error } = await supabase
+        .from("email_templates")
+        .delete()
         .eq("id", id);
       if (error) throw error;
       res.status(200).json({ success: true });

@@ -14,7 +14,7 @@ export default async function handler(
 
     if (req.method === "GET") {
       const { data, error } = await supabase
-        .from("brand_settings")
+        .from("settings")
         .select("*")
         .order("key");
       if (error) throw error;
@@ -25,9 +25,9 @@ export default async function handler(
       if (Array.isArray(settings)) {
         for (const s of settings) {
           const { error } = await supabase
-            .from("brand_settings")
+            .from("settings")
             .upsert(
-              { key: s.key, value: s.value, updated_at: new Date().toISOString() },
+              { key: s.key, value: s.value },
               { onConflict: "key" }
             );
           if (error) throw error;
@@ -35,9 +35,9 @@ export default async function handler(
       } else {
         const { key: settingKey, value } = req.body;
         const { error } = await supabase
-          .from("brand_settings")
+          .from("settings")
           .upsert(
-            { key: settingKey, value, updated_at: new Date().toISOString() },
+            { key: settingKey, value },
             { onConflict: "key" }
           );
         if (error) throw error;

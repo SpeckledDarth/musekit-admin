@@ -19,7 +19,7 @@ export default async function handler(
     const [usersRes, subsRes, activityRes] = await Promise.all([
       supabase.from("profiles").select("id", { count: "exact" }),
       supabase
-        .from("subscriptions")
+        .from("muse_product_subscriptions")
         .select("id, plan", { count: "exact" })
         .eq("status", "active"),
       supabase

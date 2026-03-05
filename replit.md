@@ -67,18 +67,19 @@ docs/                   # Sprint plans and documentation
 
 - `profiles` - User profiles (read/write)
 - `organizations` - Organization data (read)
-- `team_members` - Team membership (read/write)
-- `team_invites` - Pending team invitations (read/write)
-- `subscriptions` - Subscription status (read)
+- `organization_members` - Team membership (read/write)
+- `invitations` - Pending team invitations (read/write)
+- `muse_product_subscriptions` - Subscription status (read)
 - `audit_logs` - Audit log entries (read/write)
 - `notifications` - Notification data (read)
 - `feedback` - User feedback (read)
-- `waitlist` - Waitlist entries (read)
-- `brand_settings` - Key/value brand & setup settings (read/write)
-- `feature_toggles` - Feature toggle flags (read/write)
+- `waitlist_entries` - Waitlist entries (read)
+- `settings` - Key/value settings including feature toggles as `feature.*` prefix (read/write)
 - `email_templates` - Email templates (read/write)
-- `api_keys` - API key management (read/write)
-- `support_tickets` - Customer support tickets (read/write)
+- `config_secrets` - API key management with `key_name`/`encrypted_value` columns (read/write)
+- `tickets` - Customer support tickets (read/write)
+- `ticket_comments` - Ticket comments/admin responses (read/write)
+- `affiliate_testimonials` - Customer testimonials (read/write)
 
 ## Running
 
@@ -122,3 +123,18 @@ All 11 gaps closed across 6 sprints:
 - Fixed critical `verifyAdmin()` cookie auth bug — replaced hardcoded `sb-access-token` cookie name with `@supabase/ssr`'s `createServerClient` which handles chunked Supabase auth cookies automatically
 - Deduplicated admin role check into single code path
 - Removed obsolete `extractCookieValue` helper
+
+### Database Alignment (Session 14)
+Fixed all table name and column mismatches between codebase and real Supabase schema:
+- `brand_settings` → `settings` (removed `updated_at` from upserts)
+- `team_members` → `organization_members`
+- `team_invites` → `invitations` (added `token`, `expires_at`)
+- `subscriptions` → `muse_product_subscriptions`
+- `support_tickets` → `tickets` (`message` → `description`, added `ticket_number`, `category`)
+- `waitlist` → `waitlist_entries`
+- `api_keys` → `config_secrets` (`name` → `key_name`, `value` → `encrypted_value`)
+- `feature_toggles` → stored in `settings` table as `feature.*` key/value pairs
+- Testimonials switched from `useSettings` JSON to `affiliate_testimonials` table
+- Admin responses now saved to `ticket_comments` table
+- Email templates aligned with real column names, added Create/Delete handlers
+- Reusable CSV export utility added (`src/lib/csv-export.ts`), wired to Users, Tickets, Revenue

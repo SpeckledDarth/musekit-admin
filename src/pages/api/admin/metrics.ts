@@ -33,15 +33,15 @@ export default async function handler(
         .select("id", { count: "exact" })
         .gte("created_at", thirtyDaysAgo.toISOString()),
       supabase
-        .from("subscriptions")
+        .from("muse_product_subscriptions")
         .select("id, plan", { count: "exact" })
         .eq("status", "active"),
       supabase
-        .from("subscriptions")
+        .from("muse_product_subscriptions")
         .select("id", { count: "exact" })
         .eq("status", "canceled"),
       supabase.from("feedback").select("id", { count: "exact" }),
-      supabase.from("waitlist").select("id", { count: "exact" }),
+      supabase.from("waitlist_entries").select("id", { count: "exact" }),
     ]);
 
     const totalUsers = totalUsersRes.count || 0;

@@ -14,6 +14,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { formatCurrency, formatNumber, formatDate } from "@/lib/utils";
+import { downloadCSV } from "@/lib/csv-export";
 import { DollarSign, Download, Search, TrendingUp } from "lucide-react";
 import {
   LineChart,
@@ -106,23 +107,14 @@ export default function RevenuePage() {
 
   const exportCSV = () => {
     if (!data) return;
-    const headers = ["ID", "User ID", "Plan", "Amount", "Status", "Date"];
-    const rows = filteredTransactions.map((t) => [
-      t.id,
-      t.user_id,
-      t.plan,
-      t.amount.toFixed(2),
-      t.status,
-      t.created_at,
+    downloadCSV(filteredTransactions, "revenue-export", [
+      { key: "id", label: "ID" },
+      { key: "user_id", label: "User ID" },
+      { key: "plan", label: "Plan" },
+      { key: "amount", label: "Amount" },
+      { key: "status", label: "Status" },
+      { key: "created_at", label: "Date" },
     ]);
-    const csv = [headers, ...rows].map((row) => row.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `revenue-export-${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   const statusVariant = (status: string) => {
