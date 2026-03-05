@@ -80,6 +80,7 @@ docs/                   # Sprint plans and documentation
 - `tickets` - Customer support tickets (read/write)
 - `ticket_comments` - Ticket comments/admin responses (read/write)
 - `affiliate_testimonials` - Customer testimonials (read/write)
+- `site_pages` - CMS pages with SEO fields (read/write)
 
 ## Running
 
@@ -172,3 +173,14 @@ Full rebuild of Customer Service with dedicated ticket detail page:
 - **Ticket Detail API** (`src/pages/api/admin/customer-service/[id].ts`): NEW — GET (ticket + comments), PUT (update status/priority/assigned_to with resolved_at/closed_at logic), POST (add comment), DELETE (delete ticket), all with audit logging.
 - **Customer Service API** (`src/pages/api/admin/customer-service.ts`): Added POST actions for create_ticket, bulk_close, bulk_assign, bulk_priority, all with audit logging.
 - **Breadcrumb** (`src/layout/Breadcrumb.tsx`): Added "customer-service" label mapping.
+
+### Phase 2: Dashboard Polish (Session 17)
+Four major upgrades across the admin panel:
+
+- **Onboarding rebuild** (`src/pages/onboarding.tsx`): Date range selector (7d/30d/90d/All Time), summary stat cards (signups, verified %, first login %, first action %, overall conversion), funnel visualization with step-to-step conversion rates and drop-off counts (color-coded), Recharts AreaChart for daily signup time-series, drop-off analysis card with contextual suggestions, CSV export. API (`src/pages/api/admin/onboarding.ts`) updated with `?range=` query param for date filtering and `dailySignups` time-series data.
+
+- **Settings rebuild** (`src/pages/settings.tsx`): 5-tab settings management (General/Security/Notifications/Maintenance/Danger Zone). General: app name, description, timezone, language, support email. Security: session timeout, max login attempts, 2FA toggle, IP allowlist. Notifications: 5 notification toggles, Slack webhook, notification email override. Maintenance: maintenance mode toggle with warning card, message textarea, scheduled date. Danger Zone: purge audit logs (with days input + ConfirmDialog), reset all settings (ConfirmDialog), export all data (JSON download). New API (`src/pages/api/admin/settings.ts`) with GET/PUT for `admin.*` settings prefix and POST for danger zone actions.
+
+- **Pages/CMS upgrade** (`src/pages/setup/pages.tsx`): Switched from `useSettings` JSON storage to `site_pages` Supabase table. Table view with sortable columns (Title, Slug, Status, Updated At), search with debounce, status filter (All/Published/Draft), 25-row pagination. Inline editor panel for CRUD with title, slug (auto-generated), content textarea, SEO fields (meta_title, meta_description), status toggle. Create/Delete with ConfirmDialog, CSV export, EmptyState. New API (`src/pages/api/admin/setup/pages.ts`) with full CRUD + audit logging.
+
+- **Sidebar redesign** (`src/layout/AdminSidebar.tsx`): Vercel-style navigation with left border accent active state (replacing full bg-primary fill), `bg-muted/50` hover with smooth transitions, compact spacing (`text-[13px]`, `py-1.5`, `h-4 w-4` icons), thin divider section separators, setup drill-in sub-navigation (13 setup sub-items indented under "Setup Dashboard" when on `/setup/*` routes), admin profile mini-card at bottom (avatar with initials, name, role badge, hover-reveal logout button), collapsed state with icon-only tooltips.
