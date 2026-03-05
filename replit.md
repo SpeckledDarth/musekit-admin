@@ -184,3 +184,14 @@ Four major upgrades across the admin panel:
 - **Pages/CMS upgrade** (`src/pages/setup/pages.tsx`): Switched from `useSettings` JSON storage to `site_pages` Supabase table. Table view with sortable columns (Title, Slug, Status, Updated At), search with debounce, status filter (All/Published/Draft), 25-row pagination. Inline editor panel for CRUD with title, slug (auto-generated), content textarea, SEO fields (meta_title, meta_description), status toggle. Create/Delete with ConfirmDialog, CSV export, EmptyState. New API (`src/pages/api/admin/setup/pages.ts`) with full CRUD + audit logging.
 
 - **Sidebar redesign** (`src/layout/AdminSidebar.tsx`): Vercel-style navigation with left border accent active state (replacing full bg-primary fill), `bg-muted/50` hover with smooth transitions, compact spacing (`text-[13px]`, `py-1.5`, `h-4 w-4` icons), thin divider section separators, setup drill-in sub-navigation (13 setup sub-items indented under "Setup Dashboard" when on `/setup/*` routes), admin profile mini-card at bottom (avatar with initials, name, role badge, hover-reveal logout button), collapsed state with icon-only tooltips.
+
+### Phase 3: User-Facing Components (Session 18)
+Three exportable user-facing components added to the package (not admin pages — consumed by the integration Repl):
+
+- **UserDashboard** (`src/components/UserDashboard.tsx`): Self-contained dashboard for authenticated end-users. Sections: Subscription status card (plan, status badge, period dates), Notification feed (latest 10 with mark-all-read), Activity timeline (last 20 audit log entries), Quick actions grid (Edit Profile, View Billing, Submit Feedback, Contact Support via `onAction` callback), Getting started checklist (profile complete, email verified, first login, subscription active, org created with progress bar). Handles unauthenticated state gracefully.
+
+- **UserProfileSettings** (`src/components/UserProfileSettings.tsx`): Account settings for end-users. Sections: Avatar upload (via ImageUpload + Supabase storage, updates `profiles.avatar_url`), Display name editing (inline save to profiles table), Email change (via `supabase.auth.updateUser`), Password change (with 8-char minimum validation), Account deletion (red danger zone card with ConfirmDialog, delegates to `onDeleteAccount` callback). Unsaved changes guard, toast notifications.
+
+- **UserAvatarMenu** (`src/components/UserAvatarMenu.tsx`): Header avatar circle with dropdown menu. Shows user photo or initials, click-toggled dropdown with Dashboard/Account Settings/Sign Out items. Click-outside detection. `onAction` callback typed as `"dashboard" | "settings" | "sign-out"`. AdminHeader updated to use this component internally with working navigation for all actions.
+
+All three components + their prop types exported from `src/index.ts`.
