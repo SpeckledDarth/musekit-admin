@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { createSupabaseAdmin } from "@/lib/supabase";
 import { verifyAdmin } from "@/lib/admin-auth";
+import { logAuditEvent } from "@/lib/audit-log";
 
 export default async function handler(
   req: NextApiRequest,
@@ -75,14 +76,15 @@ export default async function handler(
     }
   } else if (req.method === "POST") {
     try {
-      const { action, id, status, admin_response } = req.body;
+      const supabase = createSupabaseAdmin();
+      const { action } = req.body;
 
       if (action === "update_ticket") {
+        const { id, status, admin_response } = req.body;
         if (!id) {
           return res.status(400).json({ error: "Ticket ID is required" });
         }
 
-        const supabase = createSupabaseAdmin();
         const updateData: Record<string, unknown> = {
           updated_at: new Date().toISOString(),
         };
@@ -115,7 +117,114 @@ export default async function handler(
           });
         }
 
+        await logAuditEvent("ticket_updated", admin.userId, {
+          resource_type: "ticket",
+          resource_id: id,
+          after: { status },
+        });
+
         return res.status(200).json({ ticket: data });
+      }
+
+      if (action === "create_ticket") {
+        const { subject, description, priority, user_email } = req.body;
+        if (!subject || !description) {
+          return res.status(400).json({ error: "Subject and description are required" });
+        }
+
+        const now = new Date().toISOString();
+        const insertData: Record<string, unknown> = {
+          subject,
+          description,
+          priority: priority || "medium",
+          status: "open",
+          created_at: now,
+          updated_at: now,
+        };
+        if (user_email) insertData.user_email = user_email;
+
+        const { data, error } = await supabase
+          .from("tickets")
+          .insert(insertData)
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        await logAuditEvent("ticket_created", admin.userId, {
+          resource_type: "ticket",
+          resource_id: data.id,
+          after: { subject, priority: priority || "medium" },
+        });
+
+        return res.status(200).json({ ticket: data });
+      }
+
+      if (action === "bulk_close") {
+        const { ticketIds } = req.body;
+        if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+          return res.status(400).json({ error: "ticketIds array is required" });
+        }
+
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from("tickets")
+          .update({ status: "closed", closed_at: now, updated_at: now })
+          .in("id", ticketIds);
+
+        if (error) throw error;
+
+        await logAuditEvent("tickets_bulk_closed", admin.userId, {
+          resource_type: "ticket",
+          after: { ticketIds, count: ticketIds.length },
+        });
+
+        return res.status(200).json({ success: true });
+      }
+
+      if (action === "bulk_assign") {
+        const { ticketIds, assignTo } = req.body;
+        if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0) {
+          return res.status(400).json({ error: "ticketIds array is required" });
+        }
+
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from("tickets")
+          .update({ assigned_to: assignTo || admin.userId, updated_at: now })
+          .in("id", ticketIds);
+
+        if (error) throw error;
+
+        const actualAssignee = assignTo || admin.userId;
+        await logAuditEvent("tickets_bulk_assigned", admin.userId, {
+          resource_type: "ticket",
+          after: { ticketIds, assignTo: actualAssignee, count: ticketIds.length },
+        });
+
+        return res.status(200).json({ success: true, assignedTo: actualAssignee });
+      }
+
+      if (action === "bulk_priority") {
+        const { ticketIds, priority } = req.body;
+        if (!ticketIds || !Array.isArray(ticketIds) || ticketIds.length === 0 || !priority) {
+          return res.status(400).json({ error: "ticketIds and priority are required" });
+        }
+
+        const now = new Date().toISOString();
+        const { error } = await supabase
+          .from("tickets")
+          .update({ priority, updated_at: now })
+          .in("id", ticketIds);
+
+        if (error) throw error;
+
+        await logAuditEvent("tickets_bulk_priority_changed", admin.userId, {
+          resource_type: "ticket",
+          after: { ticketIds, priority, count: ticketIds.length },
+        });
+
+        return res.status(200).json({ success: true });
       }
 
       return res.status(400).json({ error: "Unknown action" });

@@ -164,3 +164,11 @@ Applied Standards B (list-view), C (CRUD + audit), and E (UX) to 5 pages + Users
 - **Feature Toggles** (`src/pages/feature-toggles.tsx`): Converted to table layout, sortable columns, category filter, edit modal, delete with ConfirmDialog, bulk enable/disable/delete, CSV export, Add Toggle modal, row count, toasts
 - **Feature Toggles API** (`src/pages/api/admin/setup/feature-toggles.ts`): Added PATCH (edit) + DELETE handlers with audit logging
 - **Branding** (`src/pages/setup/branding.tsx`): ImageUpload for logo + favicon (drag-drop, 5MB limit), unsaved changes guard, toast notifications on save
+
+### Prompt 09 Sprint 3: Customer Service Rebuild (Session 16)
+Full rebuild of Customer Service with dedicated ticket detail page:
+- **Customer Service list** (`src/pages/customer-service.tsx`): Both Profiles + Tickets tabs upgraded — sortable columns, debounced search, 25-row pagination, clickable rows (profiles → /users/[id], tickets → /customer-service/[id]), tab counts, EmptyState. Tickets tab: checkbox + bulk actions (close/assign/priority change/export CSV), "New Ticket" modal, CSV export, ConfirmDialog, toasts. Profiles tab: simplified to table-only (removed inline detail panel).
+- **Ticket Detail page** (`src/pages/customer-service/[id].tsx`): NEW — two-column layout with ticket info card, full comment thread from ticket_comments, reply form with internal note toggle, status/priority/assignee management, Close/Reopen/Delete quick actions with ConfirmDialog, breadcrumbs, toasts, EmptyState for not found.
+- **Ticket Detail API** (`src/pages/api/admin/customer-service/[id].ts`): NEW — GET (ticket + comments), PUT (update status/priority/assigned_to with resolved_at/closed_at logic), POST (add comment), DELETE (delete ticket), all with audit logging.
+- **Customer Service API** (`src/pages/api/admin/customer-service.ts`): Added POST actions for create_ticket, bulk_close, bulk_assign, bulk_priority, all with audit logging.
+- **Breadcrumb** (`src/layout/Breadcrumb.tsx`): Added "customer-service" label mapping.

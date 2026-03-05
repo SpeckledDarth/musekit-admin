@@ -19,6 +19,7 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
     metrics: "Metrics",
     "audit-log": "Audit Log",
     settings: "Settings",
+    "customer-service": "Customer Service",
   };
 
   let path = "";
