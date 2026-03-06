@@ -1,0 +1,150 @@
+Prompt 15: musekit-admin — Fix Remaining next/router Usage (8 Files)
+Module Repl
+musekit-admin (GitHub: SpeckledDarth/musekit-admin)
+
+Context
+The AdminSidebar was successfully converted to next/navigation, but 8 other files still use import { useRouter } from "next/router". This crashes every admin route in the App Router integration monorepo with "NextRouter was not mounted."
+
+This is a small, focused fix. Do NOT change any logic, UI, or functionality — only change the router imports and API calls.
+
+The Fix
+Replace next/router with next/navigation equivalents in all 8 files below. The key API differences are:
+
+Pages Router (next/router)	App Router (next/navigation)
+import { useRouter } from "next/router"	import { useRouter, usePathname, useParams, useSearchParams } from "next/navigation"
+router.pathname	usePathname() (call at component top level)
+router.query (for route params like [id])	useParams() (call at component top level)
+router.query (for query string like ?search=foo)	useSearchParams() (call at component top level)
+router.push(path)	router.push(path) (same API)
+router.replace(path)	router.replace(path) (same API)
+router.replace({ pathname, query })	router.replace(pathname + "?" + new URLSearchParams(query).toString())
+router.isReady	Not needed — always ready in App Router
+Important: Every file using next/navigation hooks must have "use client" at the top.
+
+File-by-File Changes
+1. src/layout/AdminHeader.tsx (line 4)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+router.push("/");
+router.push("/settings");
+Fix: Replace import with next/navigation. The router.push() calls are identical in both APIs — only the import line changes.
+
+2. src/layout/SetupSidebar.tsx (line 5)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+const isActive = router.pathname === item.href;
+Fix: Replace with:
+
+import { usePathname } from "next/navigation";
+const pathname = usePathname();
+const isActive = pathname === item.href;
+Remove useRouter entirely since only pathname is used.
+
+3. src/hooks/useListView.ts (line 2)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+const query = router.query;
+// ...
+for (const [k, v] of Object.entries(router.query)) { ... }
+router.replace({ pathname: router.pathname, query: newQuery }, undefined, { shallow: true });
+Fix: This is the most complex conversion. Replace with:
+
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
+const router = useRouter();
+const pathname = usePathname();
+const searchParams = useSearchParams();
+// Convert searchParams to a plain object where router.query was used:
+const query = Object.fromEntries(searchParams.entries());
+// For router.replace with query:
+const newParams = new URLSearchParams();
+for (const [k, v] of Object.entries(newQuery)) {
+  if (v !== undefined && v !== null && v !== "") {
+    newParams.set(k, String(v));
+  }
+}
+router.replace(`${pathname}?${newParams.toString()}`);
+Note: The { shallow: true } option does not exist in App Router's router.replace() — remove it. App Router navigation is shallow by default for client-side transitions.
+
+4. src/pages/setup/index.tsx (line 4)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+router.replace("/setup/branding");
+Fix:
+
+"use client";
+import { useRouter } from "next/navigation";
+const router = useRouter();
+router.replace("/admin/setup/branding");
+Note: Also fix the redirect path from /setup/branding to /admin/setup/branding (all admin routes are prefixed with /admin/ in the integration monorepo).
+
+5. src/pages/users/index.tsx (line 3)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+router.push(`/users/${user.id}`);
+Fix: Replace import with next/navigation. The router.push() call is identical in both APIs.
+
+6. src/pages/users/[id].tsx (line 3)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+const { id } = router.query;
+Fix:
+
+import { useRouter, useParams } from "next/navigation";
+const router = useRouter();
+const params = useParams();
+const id = params.id as string;
+7. src/pages/customer-service.tsx (line 3)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+router.push(`/customer-service/${ticket.id}`);
+router.push(`/users/${user.id}`);
+Fix: Replace import with next/navigation. The router.push() calls are identical in both APIs. This file has two separate components that each call useRouter() — fix both.
+
+8. src/pages/customer-service/[id].tsx (line 4)
+Current usage:
+
+import { useRouter } from "next/router";
+const router = useRouter();
+const { id } = router.query;
+router.push("/customer-service");
+Fix:
+
+import { useRouter, useParams } from "next/navigation";
+const router = useRouter();
+const params = useParams();
+const id = params.id as string;
+// router.push() calls remain the same
+What NOT to Do
+Do NOT change any UI, layout, styling, or component logic
+Do NOT change any Supabase queries or data handling
+Do NOT add or remove any components or features
+Do NOT change any file outside the 8 files listed above
+Do NOT change the AdminSidebar — it is already correctly using next/navigation
+Verification Checklist
+Before reporting completion, confirm EACH of these items. Show the file and line number for each:
+
+ grep -r "next/router" src/ returns zero results
+ src/layout/AdminHeader.tsx imports from next/navigation
+ src/layout/SetupSidebar.tsx uses usePathname() from next/navigation
+ src/hooks/useListView.ts uses useSearchParams() and usePathname() from next/navigation
+ src/pages/setup/index.tsx imports from next/navigation and redirects to /admin/setup/branding
+ src/pages/users/index.tsx imports from next/navigation
+ src/pages/users/[id].tsx uses useParams() to get id
+ src/pages/customer-service.tsx imports from next/navigation (both components)
+ src/pages/customer-service/[id].tsx uses useParams() to get id
+ All 8 files have "use client" at the top
+ No other files in the project import from next/router
