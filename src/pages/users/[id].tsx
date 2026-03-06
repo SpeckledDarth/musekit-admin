@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/router";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -115,8 +115,8 @@ interface EditForm {
 }
 
 export default function UserDetailPage() {
-  const params = useParams();
-  const id = params?.id as string | undefined;
+  const router = useRouter();
+  const { id } = router.query;
   const { user: adminUser } = useAdmin();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);

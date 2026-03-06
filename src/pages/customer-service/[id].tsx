@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +52,7 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive" | "o
 
 export default function TicketDetailPage() {
   const router = useRouter();
-  const params = useParams();
-  const id = params?.id as string | undefined;
+  const { id } = router.query;
   const { user } = useAdmin();
 
   const [ticket, setTicket] = useState<SupportTicket | null>(null);

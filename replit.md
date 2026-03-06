@@ -197,10 +197,8 @@ Three exportable user-facing components added to the package (not admin pages �
 All three components + their prop types exported from `src/index.ts`.
 
 ### Router Migration (Session 18)
-Migrated all `next/router` imports to `next/navigation` for App Router compatibility (8 files):
-- `useRouter().pathname` → `usePathname()` (AdminSidebar, Breadcrumb, SetupSidebar)
-- `useRouter().query` → `useParams()` (customer-service/[id]) or `useSearchParams()` (useListView)
-- `router.replace({ pathname, query })` → `router.replace(pathname + "?" + params.toString())` (useListView)
-- Simple `router.push()` calls unchanged (AdminHeader, customer-service, users/index)
-- All `usePathname()`/`useSearchParams()` results null-coalesced for strict TypeScript safety
-- Zero `next/router` imports remaining in the codebase
+Partial migration for App Router compatibility — layout components use `next/navigation`, page components stay on `next/router`:
+- **`next/navigation` (read-only path detection)**: `AdminSidebar`, `Breadcrumb`, `SetupSidebar` — use `usePathname()` with `?? "/"` null coalescing
+- **`next/router` (navigation + query)**: All page components (`customer-service`, `users/*`, `setup/index`), `AdminHeader`, `useListView` — use `router.push()`, `router.replace()`, `router.query`
+- **Why split**: `next/navigation`'s `useRouter` doesn't handle client-side navigation correctly in Pages Router projects (prepends wrong paths). Only `usePathname()` is safe to use cross-router.
+- Fixed `setup/index.tsx` redirect from `/admin/setup/branding` → `/setup/branding`
