@@ -13,6 +13,8 @@ import {
   BarChart3,
   ScrollText,
   Settings,
+  ChevronLeft,
+  ChevronRight,
   Shield,
   Sliders,
   ToggleLeft,
@@ -33,7 +35,6 @@ import {
   Palette,
   Megaphone,
   ArrowLeft,
-  ChevronRight,
   LogOut,
 } from "lucide-react";
 
@@ -78,7 +79,12 @@ const navItems: NavItem[] = [
   { label: "Settings", href: "/settings", icon: Settings, section: "System" },
 ];
 
-export function AdminSidebar() {
+interface AdminSidebarProps {
+  collapsed?: boolean;
+  onToggle?: () => void;
+}
+
+export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps) {
   const pathname = usePathname() ?? "/";
   const { user } = useAdmin();
 
@@ -86,15 +92,37 @@ export function AdminSidebar() {
     (item) => item.children && pathname.startsWith(item.href) && item.href !== "/"
   );
 
-  const isDrilledIn = !!activeDrillIn;
+  const isDrilledIn = !!activeDrillIn && !collapsed;
 
   const sections = Array.from(new Set(navItems.map((item) => item.section)));
 
   return (
-    <aside className="flex flex-col border-r bg-card h-screen sticky top-0 overflow-y-auto w-64">
-      <div className="flex items-center gap-2 p-4 border-b">
-        <Shield className="h-5 w-5 text-primary" />
-        <span className="font-semibold text-[15px]">Admin</span>
+    <aside
+      className={cn(
+        "flex flex-col border-r bg-card transition-all duration-200 h-screen sticky top-0 overflow-y-auto",
+        collapsed ? "w-16" : "w-64"
+      )}
+    >
+      <div className="flex items-center justify-between p-4 border-b">
+        {!collapsed && (
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            <span className="font-semibold text-[15px]">Admin</span>
+          </div>
+        )}
+        <button
+          onClick={onToggle}
+          className={cn(
+            "p-1.5 rounded-md hover:bg-muted transition-colors duration-150",
+            collapsed && "mx-auto"
+          )}
+        >
+          {collapsed ? (
+            <ChevronRight className="h-4 w-4" />
+          ) : (
+            <ChevronLeft className="h-4 w-4" />
+          )}
+        </button>
       </div>
 
       <nav className="flex-1 px-2 py-2">
@@ -138,10 +166,12 @@ export function AdminSidebar() {
           sections.map((section, sectionIndex) => (
             <div key={section}>
               {sectionIndex > 0 && (
-                <div className="my-2 px-3">
-                  <p className="text-[10px] text-muted-foreground/60 mb-1">
-                    {section}
-                  </p>
+                <div className={cn("my-2", !collapsed && "px-3")}>
+                  {!collapsed && (
+                    <p className="text-[10px] text-muted-foreground/60 mb-1">
+                      {section}
+                    </p>
+                  )}
                   <div className="border-t" />
                 </div>
               )}
@@ -158,17 +188,23 @@ export function AdminSidebar() {
                     <Link
                       key={item.href}
                       href={hasChildren ? item.children![0].href : item.href}
+                      title={collapsed ? item.label : undefined}
                       className={cn(
                         "flex items-center gap-3 px-3 py-1.5 rounded-md text-[13px] transition-colors duration-150 relative",
                         isActive
                           ? "bg-muted text-foreground font-medium border-l-2 border-primary"
-                          : "text-muted-foreground font-normal hover:bg-muted/50 hover:text-foreground"
+                          : "text-muted-foreground font-normal hover:bg-muted/50 hover:text-foreground",
+                        collapsed && "justify-center px-0"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
-                      <span className="flex-1">{item.label}</span>
-                      {hasChildren && (
-                        <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      {!collapsed && (
+                        <>
+                          <span className="flex-1">{item.label}</span>
+                          {hasChildren && (
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          )}
+                        </>
                       )}
                     </Link>
                   );
@@ -179,26 +215,34 @@ export function AdminSidebar() {
       </nav>
 
       <div className="border-t p-3 group">
-        <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
-            {user?.full_name ? getInitials(user.full_name) : "A"}
+        {collapsed ? (
+          <div className="flex justify-center">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+              {user?.full_name ? getInitials(user.full_name) : "A"}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-medium truncate">
-              {user?.full_name || "Admin"}
-            </p>
-            <p className="text-[10px] text-muted-foreground capitalize">
-              {user?.role?.replace("_", " ") || "admin"}
-            </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary shrink-0">
+              {user?.full_name ? getInitials(user.full_name) : "A"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium truncate">
+                {user?.full_name || "Admin"}
+              </p>
+              <p className="text-[10px] text-muted-foreground capitalize">
+                {user?.role?.replace("_", " ") || "admin"}
+              </p>
+            </div>
+            <button
+              onClick={() => { supabase.auth.signOut().then(() => { window.location.href = "/admin"; }); }}
+              className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={() => { supabase.auth.signOut().then(() => { window.location.href = "/admin"; }); }}
-            className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
+        )}
       </div>
     </aside>
   );
