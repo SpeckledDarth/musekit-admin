@@ -5,6 +5,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: false,
   },
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/admin",
+        basePath: false,
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       {
