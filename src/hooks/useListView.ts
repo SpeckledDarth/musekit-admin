@@ -1,5 +1,7 @@
+"use client";
+
 import { useCallback, useMemo } from "react";
-import { useRouter } from "next/router";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 interface UseListViewOptions {
   filterKeys?: string[];
@@ -23,17 +25,19 @@ interface UseListViewReturn {
 function useListView(options: UseListViewOptions = {}): UseListViewReturn {
   const { filterKeys = [], defaultPageSize = 25 } = options;
   const router = useRouter();
-  const query = router.query;
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const query = searchParams ? Object.fromEntries(searchParams.entries()) : {};
 
-  const search = (query.search as string) || "";
-  const page = parseInt((query.page as string) || "1", 10);
-  const sort = (query.sort as string) || "";
-  const dir = (query.dir as string) || "";
+  const search = query.search || "";
+  const page = parseInt(query.page || "1", 10);
+  const sort = query.sort || "";
+  const dir = query.dir || "";
 
   const filters = useMemo(() => {
     const result: Record<string, string> = {};
     for (const key of filterKeys) {
-      result[key] = (query[key] as string) || "all";
+      result[key] = query[key] || "all";
     }
     return result;
   }, [query, filterKeys]);
@@ -41,7 +45,7 @@ function useListView(options: UseListViewOptions = {}): UseListViewReturn {
   const updateQuery = useCallback(
     (updates: Record<string, string | undefined>) => {
       const newQuery: Record<string, string> = {};
-      for (const [k, v] of Object.entries(router.query)) {
+      for (const [k, v] of Object.entries(query)) {
         if (typeof v === "string" && v) newQuery[k] = v;
       }
       for (const [k, v] of Object.entries(updates)) {
@@ -51,11 +55,16 @@ function useListView(options: UseListViewOptions = {}): UseListViewReturn {
           delete newQuery[k];
         }
       }
-      router.replace({ pathname: router.pathname, query: newQuery }, undefined, {
-        shallow: true,
-      });
+      const newParams = new URLSearchParams();
+      for (const [k, v] of Object.entries(newQuery)) {
+        if (v !== undefined && v !== null && v !== "") {
+          newParams.set(k, String(v));
+        }
+      }
+      const paramString = newParams.toString();
+      router.replace(paramString ? `${pathname}?${paramString}` : pathname);
     },
-    [router]
+    [router, pathname, query]
   );
 
   const setSearch = useCallback(

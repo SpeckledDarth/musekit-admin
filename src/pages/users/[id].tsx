@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useEffect, useState, useCallback } from "react";
 import Head from "next/head";
-import { useRouter } from "next/router";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -116,7 +118,8 @@ interface EditForm {
 
 export default function UserDetailPage() {
   const router = useRouter();
-  const { id } = router.query;
+  const params = useParams();
+  const id = params.id as string;
   const { user: adminUser } = useAdmin();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);

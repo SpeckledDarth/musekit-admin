@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
