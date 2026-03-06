@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils";
 import { useAdmin } from "@/hooks/useAdmin";
@@ -78,11 +78,11 @@ interface AdminSidebarProps {
 }
 
 export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps) {
-  const router = useRouter();
+  const pathname = usePathname() ?? "/";
   const { user } = useAdmin();
 
   const sections = Array.from(new Set(navItems.map((item) => item.section)));
-  const isSetupRoute = router.pathname.startsWith("/setup");
+  const isSetupRoute = pathname.startsWith("/setup");
 
   return (
     <aside
@@ -131,9 +131,9 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
               .map((item) => {
                 const isActive =
                   item.href === "/setup"
-                    ? router.pathname.startsWith("/setup")
-                    : router.pathname === item.href ||
-                      (item.href !== "/" && router.pathname.startsWith(item.href));
+                    ? pathname.startsWith("/setup")
+                    : pathname === item.href ||
+                      (item.href !== "/" && pathname.startsWith(item.href));
 
                 return (
                   <React.Fragment key={item.href}>
@@ -154,7 +154,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
                     {item.href === "/setup" && isSetupRoute && !collapsed && (
                       <div className="mt-0.5 mb-1 space-y-0.5">
                         {setupSubItems.map((subItem) => {
-                          const isSubActive = router.pathname === subItem.href;
+                          const isSubActive = pathname === subItem.href;
                           return (
                             <Link
                               key={subItem.href}

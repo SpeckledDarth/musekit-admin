@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   Paintbrush,
@@ -37,7 +37,7 @@ const setupNavItems = [
 ];
 
 export function SetupSidebar() {
-  const router = useRouter();
+  const pathname = usePathname() ?? "/";
 
   return (
     <div className="w-56 shrink-0 border-r bg-muted/30 p-3 space-y-1">
@@ -45,7 +45,7 @@ export function SetupSidebar() {
         Setup
       </p>
       {setupNavItems.map((item) => {
-        const isActive = router.pathname === item.href;
+        const isActive = pathname === item.href;
         return (
           <Link
             key={item.href}

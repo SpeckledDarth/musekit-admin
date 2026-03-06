@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { usePathname } from "next/navigation";
 import { ChevronRight, Home } from "lucide-react";
 
 interface BreadcrumbItem {
@@ -36,8 +36,8 @@ function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
 }
 
 export function Breadcrumb() {
-  const router = useRouter();
-  const crumbs = generateBreadcrumbs(router.pathname);
+  const pathname = usePathname() ?? "/";
+  const crumbs = generateBreadcrumbs(pathname);
 
   if (crumbs.length <= 1) return null;
 

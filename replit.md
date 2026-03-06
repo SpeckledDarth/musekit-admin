@@ -195,3 +195,12 @@ Three exportable user-facing components added to the package (not admin pages �
 - **UserAvatarMenu** (`src/components/UserAvatarMenu.tsx`): Header avatar circle with dropdown menu. Shows user photo or initials, click-toggled dropdown with Dashboard/Account Settings/Sign Out items. Click-outside detection. `onAction` callback typed as `"dashboard" | "settings" | "sign-out"`. AdminHeader updated to use this component internally with working navigation for all actions.
 
 All three components + their prop types exported from `src/index.ts`.
+
+### Router Migration (Session 18)
+Migrated all `next/router` imports to `next/navigation` for App Router compatibility (8 files):
+- `useRouter().pathname` → `usePathname()` (AdminSidebar, Breadcrumb, SetupSidebar)
+- `useRouter().query` → `useParams()` (customer-service/[id]) or `useSearchParams()` (useListView)
+- `router.replace({ pathname, query })` → `router.replace(pathname + "?" + params.toString())` (useListView)
+- Simple `router.push()` calls unchanged (AdminHeader, customer-service, users/index)
+- All `usePathname()`/`useSearchParams()` results null-coalesced for strict TypeScript safety
+- Zero `next/router` imports remaining in the codebase
