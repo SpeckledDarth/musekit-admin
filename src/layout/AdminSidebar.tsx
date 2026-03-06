@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { getInitials } from "@/lib/utils";
 import { useAdmin } from "@/hooks/useAdmin";
+import { supabase } from "@/lib/supabase";
 import {
   LayoutDashboard,
   Users,
@@ -201,7 +202,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
               </p>
             </div>
             <button
-              onClick={() => { window.location.href = "/api/auth/logout"; }}
+              onClick={() => { supabase.auth.signOut().then(() => { window.location.href = "/admin"; }); }}
               className="p-1.5 rounded-md text-muted-foreground opacity-0 group-hover:opacity-100 hover:bg-muted hover:text-foreground transition-all duration-150"
               title="Logout"
             >

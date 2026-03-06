@@ -46,9 +46,17 @@ src/
 docs/                   # Sprint plans and documentation
 ```
 
+### Base Path
+
+The app is served under `basePath: "/admin"` (configured in `next.config.js`). This means:
+- All pages are accessed at `/admin/...` (e.g., `/admin/users`, `/admin/setup/branding`)
+- API routes are at `/admin/api/admin/...`
+- Next.js `<Link>` and `router.push()` automatically prepend `/admin`
+- Manual `fetch()` calls and `window.location.href` must use the full `/admin/...` path
+
 ### Key Patterns
 
-- **API Routes**: All Supabase admin (service role) operations go through `/api/admin/*` API routes to keep the service role key server-side only
+- **API Routes**: All Supabase admin (service role) operations go through `/admin/api/admin/*` API routes to keep the service role key server-side only
 - **Admin Auth**: All API routes use `verifyAdmin()` from `src/lib/admin-auth.ts` — supports both Bearer token (programmatic) and Supabase SSR cookies (browser) via `@supabase/ssr`
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns

@@ -53,7 +53,7 @@ export default function OverviewPage() {
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const res = await fetch("/api/admin/overview");
+        const res = await fetch("/admin/api/admin/overview");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setMetrics(data);

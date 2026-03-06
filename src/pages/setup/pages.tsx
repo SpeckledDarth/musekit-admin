@@ -66,7 +66,7 @@ export default function PagesSetup() {
 
   const fetchPages = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/setup/pages");
+      const res = await fetch("/admin/api/admin/setup/pages");
       if (!res.ok) throw new Error("Failed to fetch pages");
       const data = await res.json();
       setPages(data.pages || []);
@@ -198,7 +198,7 @@ export default function PagesSetup() {
             meta_description: editingPage.meta_description,
             status: editingPage.status,
           };
-      const res = await fetch("/api/admin/setup/pages", {
+      const res = await fetch("/admin/api/admin/setup/pages", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -220,7 +220,7 @@ export default function PagesSetup() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      const res = await fetch("/api/admin/setup/pages", {
+      const res = await fetch("/admin/api/admin/setup/pages", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: deleteId }),

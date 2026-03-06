@@ -29,7 +29,7 @@ export default function TestimonialsPage() {
 
   const fetchTestimonials = useCallback(async () => {
     try {
-      const res = await fetch("/api/admin/setup/testimonials");
+      const res = await fetch("/admin/api/admin/setup/testimonials");
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setTestimonials(data.testimonials || []);
@@ -47,7 +47,7 @@ export default function TestimonialsPage() {
   async function addTestimonial() {
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/setup/testimonials", {
+      const res = await fetch("/admin/api/admin/setup/testimonials", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -83,7 +83,7 @@ export default function TestimonialsPage() {
     if (!testimonial) return;
     setSaving(true);
     try {
-      await fetch("/api/admin/setup/testimonials", {
+      await fetch("/admin/api/admin/setup/testimonials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(testimonial),
@@ -98,7 +98,7 @@ export default function TestimonialsPage() {
   async function deleteTestimonial(id: string) {
     if (!window.confirm("Are you sure you want to delete this testimonial?")) return;
     try {
-      await fetch("/api/admin/setup/testimonials", {
+      await fetch("/admin/api/admin/setup/testimonials", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -118,7 +118,7 @@ export default function TestimonialsPage() {
       prev.map((t) => (t.id === id ? { ...t, [field]: newValue } : t))
     );
     try {
-      await fetch("/api/admin/setup/testimonials", {
+      await fetch("/admin/api/admin/setup/testimonials", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, [field]: newValue }),

@@ -72,7 +72,7 @@ export default function AuditLogPage() {
   useEffect(() => {
     async function fetchFilters() {
       try {
-        const res = await fetch("/api/admin/audit-log-filters");
+        const res = await fetch("/admin/api/admin/audit-log-filters");
         if (!res.ok) return;
         const data = await res.json();
         setActions(data.actions || []);
@@ -96,7 +96,7 @@ export default function AuditLogPage() {
         dateTo,
         page: page.toString(),
       });
-      const res = await fetch(`/api/admin/audit-logs?${params}`);
+      const res = await fetch(`/admin/api/admin/audit-logs?${params}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setLogs(data.logs);

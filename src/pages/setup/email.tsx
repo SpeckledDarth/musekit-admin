@@ -41,7 +41,7 @@ export default function EmailTemplatesSetup() {
   useEffect(() => {
     async function fetchTemplates() {
       try {
-        const res = await fetch("/api/admin/setup/email-templates");
+        const res = await fetch("/admin/api/admin/setup/email-templates");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setTemplates(data.templates || []);
@@ -57,7 +57,7 @@ export default function EmailTemplatesSetup() {
   const saveTemplate = async () => {
     if (!editing) return;
     try {
-      await fetch("/api/admin/setup/email-templates", {
+      await fetch("/admin/api/admin/setup/email-templates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editing),
@@ -74,7 +74,7 @@ export default function EmailTemplatesSetup() {
   const createTemplate = async () => {
     if (!newTemplate.name) return;
     try {
-      const res = await fetch("/api/admin/setup/email-templates", {
+      const res = await fetch("/admin/api/admin/setup/email-templates", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newTemplate),

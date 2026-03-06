@@ -85,7 +85,7 @@ export default function RevenuePage() {
   useEffect(() => {
     async function fetchRevenue() {
       try {
-        const res = await fetch("/api/admin/revenue");
+        const res = await fetch("/admin/api/admin/revenue");
         if (!res.ok) throw new Error("Failed to fetch");
         const json: RevenueData = await res.json();
         setData(json);

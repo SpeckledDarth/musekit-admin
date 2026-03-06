@@ -71,7 +71,7 @@ export default function MetricsPage() {
   useEffect(() => {
     async function fetchKPIs() {
       try {
-        const res = await fetch("/api/admin/metrics");
+        const res = await fetch("/admin/api/admin/metrics");
         if (!res.ok) throw new Error("Failed to fetch");
         const data: KPIData = await res.json();
         setKpis(data);

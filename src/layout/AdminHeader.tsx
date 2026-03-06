@@ -20,7 +20,7 @@ export function AdminHeader() {
       router.push("/settings");
     } else if (action === "sign-out") {
       supabase.auth.signOut().then(() => {
-        window.location.href = "/";
+        window.location.href = "/admin";
       });
     }
   }

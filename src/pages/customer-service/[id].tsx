@@ -79,7 +79,7 @@ export default function TicketDetailPage() {
   async function fetchTicket() {
     setLoading(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`);
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`);
       if (res.status === 404) {
         setNotFound(true);
         return;
@@ -101,7 +101,7 @@ export default function TicketDetailPage() {
     if (!ticket) return;
     setUpdating(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -124,7 +124,7 @@ export default function TicketDetailPage() {
     if (!ticket || !user) return;
     setUpdating(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assigned_to: user.id }),
@@ -144,7 +144,7 @@ export default function TicketDetailPage() {
     if (!commentBody.trim()) return;
     setSubmittingComment(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ export default function TicketDetailPage() {
     setShowCloseDialog(false);
     setUpdating(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "closed" }),
@@ -190,7 +190,7 @@ export default function TicketDetailPage() {
   async function handleReopenTicket() {
     setUpdating(true);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "open" }),
@@ -210,7 +210,7 @@ export default function TicketDetailPage() {
   async function handleDeleteTicket() {
     setShowDeleteDialog(false);
     try {
-      const res = await fetch(`/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete");
