@@ -61,7 +61,7 @@ The app is served under `basePath: "/admin"` (configured in `next.config.js`). T
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns
 - **Setup Settings**: Uses `brand_settings` table with `key/value` pairs; `useSettings(prefix)` hook manages load/save per prefix
-- **Sidebar**: Grouped navigation with sections (Main, Configuration, Tools, System)
+- **Sidebar**: Vercel-style drill-in pattern — top-level shows grouped sections (Main, Configuration, Tools, System); clicking a parent with children (e.g., Setup) replaces sidebar with sub-menu + Back button. No accordion/inline expansion.
 - **Health Scores**: Client-side computed from login recency, subscription, activity, account age, profile completeness
 
 ### Environment Variables

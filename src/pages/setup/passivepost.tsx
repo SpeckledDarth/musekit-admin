@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Head from "next/head";
-import { SetupLayout } from "@/layout/SetupLayout";
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -63,13 +63,13 @@ export default function PassivePostSetup() {
 
   if (loading) {
     return (
-      <SetupLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-10 w-full" />
           <Skeleton className="h-60" />
         </div>
-      </SetupLayout>
+      </>
     );
   }
 
@@ -86,7 +86,7 @@ export default function PassivePostSetup() {
       <Head>
         <title>PassivePost - Setup - MuseKit Admin</title>
       </Head>
-      <SetupLayout>
+      
         <div className="space-y-6 max-w-4xl">
           <div className="flex items-center justify-between">
             <div>
@@ -512,7 +512,7 @@ export default function PassivePostSetup() {
             </TabsContent>
           </Tabs>
         </div>
-      </SetupLayout>
+      
     </>
   );
 }

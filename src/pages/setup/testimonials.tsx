@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Head from "next/head";
-import { SetupLayout } from "@/layout/SetupLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -151,7 +151,7 @@ export default function TestimonialsPage() {
 
   if (loading) {
     return (
-      <SetupLayout>
+      <>
         <Head>
           <title>Testimonials | Setup</title>
         </Head>
@@ -164,12 +164,12 @@ export default function TestimonialsPage() {
           </div>
           <Skeleton className="h-64" />
         </div>
-      </SetupLayout>
+      </>
     );
   }
 
   return (
-    <SetupLayout>
+    <>
       <Head>
         <title>Testimonials | Setup</title>
       </Head>
@@ -388,6 +388,6 @@ export default function TestimonialsPage() {
           </div>
         )}
       </div>
-    </SetupLayout>
+    </>
   );
 }

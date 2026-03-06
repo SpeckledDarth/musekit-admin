@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import Head from "next/head";
-import { SetupLayout } from "@/layout/SetupLayout";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -299,14 +299,14 @@ export default function ApiKeysSetup() {
 
   if (loading) {
     return (
-      <SetupLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-8 w-48" />
           {[...Array(4)].map((_, i) => (
             <Skeleton key={i} className="h-16" />
           ))}
         </div>
-      </SetupLayout>
+      </>
     );
   }
 
@@ -315,7 +315,7 @@ export default function ApiKeysSetup() {
       <Head>
         <title>API Keys - Setup - MuseKit Admin</title>
       </Head>
-      <SetupLayout>
+      
         <div className="space-y-6 max-w-3xl">
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -571,7 +571,7 @@ export default function ApiKeysSetup() {
             );
           })}
         </div>
-      </SetupLayout>
+      
     </>
   );
 }

@@ -2,8 +2,6 @@ export { AdminLayout } from "./layout/AdminLayout";
 export { AdminSidebar } from "./layout/AdminSidebar";
 export { AdminHeader } from "./layout/AdminHeader";
 export { Breadcrumb } from "./layout/Breadcrumb";
-export { SetupLayout } from "./layout/SetupLayout";
-export { SetupSidebar } from "./layout/SetupSidebar";
 
 export { ConfirmDialog } from "./components/ui/ConfirmDialog";
 export { EmptyState } from "./components/ui/EmptyState";

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Head from "next/head";
-import { SetupLayout } from "@/layout/SetupLayout";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -96,12 +96,12 @@ export default function PricingSetup() {
 
   if (loading) {
     return (
-      <SetupLayout>
+      <>
         <div className="space-y-4">
           <Skeleton className="h-8 w-48" />
           <Skeleton className="h-60" />
         </div>
-      </SetupLayout>
+      </>
     );
   }
 
@@ -110,7 +110,7 @@ export default function PricingSetup() {
       <Head>
         <title>Pricing - Setup - MuseKit Admin</title>
       </Head>
-      <SetupLayout>
+      
         <div className="space-y-6 max-w-3xl">
           <div className="flex items-center justify-between">
             <div>
@@ -245,7 +245,7 @@ export default function PricingSetup() {
             ))}
           </div>
         </div>
-      </SetupLayout>
+      
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { SetupLayout } from "@/layout/SetupLayout";
+
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -152,16 +152,16 @@ export default function CssDashboardPage() {
 
   if (loading) {
     return (
-      <SetupLayout>
+      <>
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">Loading CSS settings...</p>
         </div>
-      </SetupLayout>
+      </>
     );
   }
 
   return (
-    <SetupLayout>
+    <>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -477,6 +477,6 @@ export default function CssDashboardPage() {
           </div>
         </div>
       </div>
-    </SetupLayout>
+    </>
   );
 }
