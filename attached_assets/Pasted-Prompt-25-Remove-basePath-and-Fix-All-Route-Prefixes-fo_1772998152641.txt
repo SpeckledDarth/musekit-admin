@@ -1,0 +1,327 @@
+Prompt 25: Remove basePath and Fix All Route Prefixes for Monorepo
+Context
+Production Target
+Next.js 14.2.18 (App Router) + Supabase + Vercel
+This module lives at packages/admin/ in a Turborepo monorepo
+All admin pages are routed under /admin/ via the App Router directory structure (apps/web/src/app/admin/...)
+All admin API routes are at /api/admin/... (apps/web/src/app/api/admin/...)
+There is no basePath in the monorepo's Next.js config
+Problem: basePath Conflict
+This admin module was built as a standalone Repl with basePath: "/admin" in next.config.js. That setting causes Next.js to automatically prepend /admin to all <Link href> and router.push() calls. So the code uses paths like /users and /setup/branding, relying on basePath to produce /admin/users and /admin/setup/branding.
+
+In the monorepo, basePath does not exist. Routes are handled by the App Router directory structure. So:
+
+href="/users" navigates to /users (wrong — should be /admin/users)
+href="/setup/branding" navigates to /setup/branding (wrong — should be /admin/setup/branding)
+fetch("/admin/api/admin/overview") calls /admin/api/admin/overview (wrong — should be /api/admin/overview)
+The /admin prefix in fetch paths was doubled by basePath — the code has /admin/api/admin/... but the actual monorepo API routes are at /api/admin/....
+
+Impact
+Every sidebar navigation link is broken — pages either 404 or land on the wrong route
+Every API call fails — the /admin/api/admin/... prefix does not match monorepo routes
+Active state highlighting is broken — pathname comparisons fail because hrefs don't include /admin
+Fix — Three Categories of Changes
+Category 1: Remove basePath from next.config.js
+If next.config.js (or next.config.mjs / next.config.ts) contains basePath: "/admin", remove that line. It is not needed in the monorepo — the App Router directory structure handles the /admin prefix.
+
+Category 2: Page Route Hrefs — Add /admin Prefix
+Every href, router.push(), router.replace(), <Link href>, and window.location.href that points to an admin page needs the /admin prefix added. This includes both string literals and template literals.
+
+Files and specific changes:
+
+client/src/admin/layout/AdminSidebar.tsx
+Nav item hrefs (lines 50-79) — change every href value:
+
+"/"               → "/admin"
+"/users"          → "/admin/users"
+"/metrics"        → "/admin/metrics"
+"/audit-log"      → "/admin/audit-log"
+"/revenue"        → "/admin/revenue"
+"/setup"          → "/admin/setup"
+"/setup/branding" → "/admin/setup/branding"
+"/setup/content"  → "/admin/setup/content"
+"/setup/pages"    → "/admin/setup/pages"
+"/setup/pricing"  → "/admin/setup/pricing"
+"/setup/social"   → "/admin/setup/social"
+"/setup/features" → "/admin/setup/features"
+"/setup/api-keys" → "/admin/setup/api-keys"
+"/setup/email"    → "/admin/setup/email"
+"/setup/ai"       → "/admin/setup/ai"
+"/setup/security" → "/admin/setup/security"
+"/setup/testimonials"  → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+"/feature-toggles"     → "/admin/feature-toggles"
+"/customer-service"    → "/admin/customer-service"
+"/onboarding"          → "/admin/onboarding"
+"/settings"            → "/admin/settings"
+"Back" link in drill-in view (line 132):
+
+href="/" → href="/admin"
+Active state guards — the item.href !== "/" comparisons must also change since the Overview href changes from "/" to "/admin":
+
+Line 92: item.href !== "/" → item.href !== "/admin"
+Line 183: item.href !== "/" → item.href !== "/admin"
+Line 185: item.href !== "/" → item.href !== "/admin"
+Note: window.location.href = "/admin" in the sign-out handler (line 238) is already correct — leave it.
+
+client/src/admin/layout/SetupSidebar.tsx
+If this file exists as a separate component (the setup sidebar may be built into AdminSidebar.tsx instead), add /admin prefix to every href:
+
+"/setup/branding"      → "/admin/setup/branding"
+"/setup/content"       → "/admin/setup/content"
+"/setup/pages"         → "/admin/setup/pages"
+"/setup/pricing"       → "/admin/setup/pricing"
+"/setup/social"        → "/admin/setup/social"
+"/setup/features"      → "/admin/setup/features"
+"/setup/api-keys"      → "/admin/setup/api-keys"
+"/setup/email"         → "/admin/setup/email"
+"/setup/ai"            → "/admin/setup/ai"
+"/setup/security"      → "/admin/setup/security"
+"/setup/testimonials"  → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+Also fix the isActive comparison: pathname === item.href — this will work correctly after the href change since usePathname() returns /admin/setup/... in the monorepo.
+
+client/src/admin/layout/AdminHeader.tsx
+router.push("/")         → router.push("/admin")
+router.push("/settings") → router.push("/admin/settings")
+Note: window.location.href = "/admin" is already correct — leave it.
+
+client/src/admin/layout/Breadcrumb.tsx
+Root crumb (line 15):
+
+{ label: "Admin", href: "/" } → { label: "Admin", href: "/admin" }
+Note: The dynamic path construction (path += \/${segment}`) already works correctly becauseusePathname()returns/admin/...in the monorepo, so the segments naturally includeadmin`. No changes needed to the dynamic logic.
+
+client/src/admin/pages/index.tsx (Overview/dashboard page)
+Quick action card hrefs (lines 114, 120, 126):
+
+href: "/users"     → href: "/admin/users"
+href: "/audit-log" → href: "/admin/audit-log"
+href: "/settings"  → href: "/admin/settings"
+client/src/admin/pages/setup/index.tsx
+router.replace("/setup/branding") → router.replace("/admin/setup/branding")
+client/src/admin/pages/users/index.tsx
+Dynamic router.push with template literal (line 508):
+
+router.push(`/users/${user.id}`) → router.push(`/admin/users/${user.id}`)
+client/src/admin/pages/users/[id].tsx
+Back link (line 445):
+
+<Link href="/users"> → <Link href="/admin/users">
+Note: window.location.href = "/admin/users" (lines 258, 427) is already correct — leave it.
+
+client/src/admin/pages/customer-service.tsx
+Dynamic router.push with template literals (lines 452, 742):
+
+router.push(`/customer-service/${ticket.id}`) → router.push(`/admin/customer-service/${ticket.id}`)
+router.push(`/users/${user.id}`)              → router.push(`/admin/users/${user.id}`)
+client/src/admin/pages/customer-service/[id].tsx
+All 4 occurrences:
+
+router.push("/customer-service")                        → router.push("/admin/customer-service")    (line 221)
+<Link href="/customer-service">                         → <Link href="/admin/customer-service">     (line 260)
+onAction={() => router.push("/customer-service")}       → onAction={() => router.push("/admin/customer-service")}  (line 270)
+<Link href="/customer-service">                         → <Link href="/admin/customer-service">     (line 286)
+Category 3: API Fetch Paths — Remove basePath /admin Prefix
+Every fetch() call currently uses /admin/api/admin/... because basePath was prepending /admin. In the monorepo, the actual API routes are at /api/admin/.... Remove the leading /admin from every fetch path.
+
+Rule: Change /admin/api/admin/... → /api/admin/...
+
+Note: All file paths below use client/src/admin/... — this is the path structure in the module Repl where this prompt is executed. In the integration monorepo, these same files live at packages/admin/src/....
+
+Every file and every occurrence (exhaustive list):
+
+client/src/admin/hooks/useSettings.ts — 2 fetch calls
+Line 13:  fetch("/admin/api/admin/setup/settings")       → fetch("/api/admin/setup/settings")
+Line 53:  fetch("/admin/api/admin/setup/settings", {...}) → fetch("/api/admin/setup/settings", {...})
+client/src/admin/pages/index.tsx — 1 fetch call
+Line 56:  fetch("/admin/api/admin/overview") → fetch("/api/admin/overview")
+client/src/admin/pages/audit-log.tsx — 2 fetch calls
+Line 75:  fetch("/admin/api/admin/audit-log-filters")      → fetch("/api/admin/audit-log-filters")
+Line 99:  fetch(`/admin/api/admin/audit-logs?${params}`)    → fetch(`/api/admin/audit-logs?${params}`)
+client/src/admin/pages/onboarding.tsx — 1 fetch call
+Line 74:  fetch(`/admin/api/admin/onboarding?range=${range}`) → fetch(`/api/admin/onboarding?range=${range}`)
+client/src/admin/pages/customer-service.tsx — 7 fetch calls
+Line 94:   fetch("/admin/api/admin/customer-service?type=tickets") → fetch("/api/admin/customer-service?type=tickets")
+Line 205:  fetch("/admin/api/admin/customer-service", {...})        → fetch("/api/admin/customer-service", {...})
+Line 221:  fetch("/admin/api/admin/customer-service", {...})        → fetch("/api/admin/customer-service", {...})
+Line 238:  fetch("/admin/api/admin/customer-service", {...})        → fetch("/api/admin/customer-service", {...})
+Line 272:  fetch("/admin/api/admin/customer-service", {...})        → fetch("/api/admin/customer-service", {...})
+Line 604:  fetch("/admin/api/admin/customer-service")               → fetch("/api/admin/customer-service")
+Line 620:  fetch("/admin/api/admin/customer-service?type=tickets")  → fetch("/api/admin/customer-service?type=tickets")
+client/src/admin/pages/feature-toggles.tsx — 8 fetch calls
+Line 72:   fetch("/admin/api/admin/setup/feature-toggles")        → fetch("/api/admin/setup/feature-toggles")
+Line 143:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 159:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 179:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 197:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 244:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 265:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+Line 286:  fetch("/admin/api/admin/setup/feature-toggles", {...})  → fetch("/api/admin/setup/feature-toggles", {...})
+client/src/admin/pages/metrics.tsx — 1 fetch call
+Line 74:  fetch("/admin/api/admin/metrics") → fetch("/api/admin/metrics")
+client/src/admin/pages/revenue.tsx — 1 fetch call
+Line 88:  fetch("/admin/api/admin/revenue") → fetch("/api/admin/revenue")
+client/src/admin/pages/settings.tsx — 5 fetch calls
+Line 62:   fetch("/admin/api/admin/settings")        → fetch("/api/admin/settings")
+Line 85:   fetch("/admin/api/admin/settings", {...})  → fetch("/api/admin/settings", {...})
+Line 108:  fetch("/admin/api/admin/settings", {...})  → fetch("/api/admin/settings", {...})
+Line 131:  fetch("/admin/api/admin/settings", {...})  → fetch("/api/admin/settings", {...})
+Line 149:  fetch("/admin/api/admin/settings", {...})  → fetch("/api/admin/settings", {...})
+client/src/admin/pages/users/index.tsx — 5 fetch calls
+Line 166:  fetch(`/admin/api/admin/users?${params}`)   → fetch(`/api/admin/users?${params}`)
+Line 244:  fetch("/admin/api/admin/users", {...})       → fetch("/api/admin/users", {...})
+Line 271:  fetch("/admin/api/admin/users", {...})       → fetch("/api/admin/users", {...})
+Line 321:  fetch(`/admin/api/admin/users?${pParams}`)   → fetch(`/api/admin/users?${pParams}`)
+Line 345:  fetch("/admin/api/admin/users", {...})       → fetch("/api/admin/users", {...})
+client/src/admin/pages/users/[id].tsx — 10 fetch calls
+Line 154:  fetch(`/admin/api/admin/users/${id}`)        → fetch(`/api/admin/users/${id}`)
+Line 210:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 234:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 252:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 269:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 300:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 336:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 358:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 373:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+Line 389:  fetch(`/admin/api/admin/users/${id}`, {...})  → fetch(`/api/admin/users/${id}`, {...})
+client/src/admin/pages/customer-service/[id].tsx — 7 fetch calls
+Line 85:   fetch(`/admin/api/admin/customer-service/${id}`)        → fetch(`/api/admin/customer-service/${id}`)
+Line 107:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+Line 130:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+Line 150:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+Line 176:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+Line 196:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+Line 216:  fetch(`/admin/api/admin/customer-service/${id}`, {...})  → fetch(`/api/admin/customer-service/${id}`, {...})
+client/src/admin/pages/setup/api-keys.tsx — 3 fetch calls
+Line 152:  fetch("/admin/api/admin/setup/api-keys")        → fetch("/api/admin/setup/api-keys")
+Line 220:  fetch("/admin/api/admin/setup/api-keys", {...})  → fetch("/api/admin/setup/api-keys", {...})
+Line 236:  fetch("/admin/api/admin/setup/api-keys", {...})  → fetch("/api/admin/setup/api-keys", {...})
+client/src/admin/pages/setup/email.tsx — 3 fetch calls
+Line 44:  fetch("/admin/api/admin/setup/email-templates")        → fetch("/api/admin/setup/email-templates")
+Line 60:  fetch("/admin/api/admin/setup/email-templates", {...})  → fetch("/api/admin/setup/email-templates", {...})
+Line 77:  fetch("/admin/api/admin/setup/email-templates", {...})  → fetch("/api/admin/setup/email-templates", {...})
+client/src/admin/pages/setup/pages.tsx — 3 fetch calls
+Line 69:   fetch("/admin/api/admin/setup/pages")        → fetch("/api/admin/setup/pages")
+Line 201:  fetch("/admin/api/admin/setup/pages", {...})  → fetch("/api/admin/setup/pages", {...})
+Line 223:  fetch("/admin/api/admin/setup/pages", {...})  → fetch("/api/admin/setup/pages", {...})
+client/src/admin/pages/setup/testimonials.tsx — 5 fetch calls
+Line 32:   fetch("/admin/api/admin/setup/testimonials")        → fetch("/api/admin/setup/testimonials")
+Line 50:   fetch("/admin/api/admin/setup/testimonials", {...})  → fetch("/api/admin/setup/testimonials", {...})
+Line 86:   fetch("/admin/api/admin/setup/testimonials", {...})  → fetch("/api/admin/setup/testimonials", {...})
+Line 101:  fetch("/admin/api/admin/setup/testimonials", {...})  → fetch("/api/admin/setup/testimonials", {...})
+Line 121:  fetch("/admin/api/admin/setup/testimonials", {...})  → fetch("/api/admin/setup/testimonials", {...})
+Total: 16 files, 64 fetch calls.
+
+CRITICAL RULES
+Page routes: Add /admin prefix to every href, router.push(), router.replace(), and <Link href> that navigates to an admin page — including template literals like router.push(`/users/${id}`)
+API fetch paths: Remove the leading /admin from /admin/api/admin/... → /api/admin/...
+Active state guards: Change item.href !== "/" to item.href !== "/admin" in AdminSidebar.tsx (3 occurrences)
+Do NOT change any component logic, styling, props, types, or exports — only change string values
+Do NOT change usePathname() logic — in the monorepo, usePathname() returns the full path including /admin (e.g., /admin/setup/branding), so pathname.startsWith("/admin/setup") will work correctly after this change
+Do NOT change Breadcrumb dynamic path construction — it already works correctly since usePathname() returns /admin/...
+Leave these alone (already correct):
+window.location.href = "/admin" in AdminHeader.tsx sign-out
+window.location.href = "/admin" in AdminSidebar.tsx sign-out
+window.location.href = "/admin/users" in users/[id].tsx (2 occurrences)
+Verification
+After making all changes, run these four searches. ALL must return zero results:
+
+# 1. Find hrefs missing /admin prefix (should return 0 results):
+grep -rn 'href.*"/' client/src/admin/ | grep -v '"/admin' | grep -v '"/api' | grep -v 'http'
+# 2. Find API fetch paths with doubled /admin prefix — string literals (should return 0 results):
+grep -rn 'fetch("/admin/' client/src/admin/
+# 2b. Find API fetch paths with doubled /admin prefix — template literals (should return 0 results):
+grep -rn 'fetch(`/admin/' client/src/admin/
+# 3. Find router.push/replace string literals missing /admin prefix (should return 0 results):
+grep -rn 'router\.\(push\|replace\)("/' client/src/admin/ | grep -v '"/admin'
+# 4. Find router.push/replace template literals missing /admin prefix (should return 0 results):
+grep -rn 'router\.\(push\|replace\)(`/' client/src/admin/ | grep -v '`/admin'
+Checklist:
+
+basePath:
+
+ next.config.js does NOT contain basePath: "/admin"
+AdminSidebar.tsx:
+
+ All 22 href values in nav items start with /admin
+ "Back" link uses href="/admin"
+ 3 instances of item.href !== "/" changed to item.href !== "/admin"
+ window.location.href = "/admin" in sign-out left unchanged
+SetupSidebar.tsx (if it exists as a separate file):
+
+ All 13 href values start with /admin/setup/
+AdminHeader.tsx:
+
+ router.push("/") → router.push("/admin")
+ router.push("/settings") → router.push("/admin/settings")
+Breadcrumb.tsx:
+
+ Root crumb href: "/" → href: "/admin"
+ Dynamic path construction left unchanged
+pages/index.tsx:
+
+ 3 quick action hrefs use /admin/...
+pages/setup/index.tsx:
+
+ router.replace uses /admin/setup/branding
+pages/users/index.tsx:
+
+ Template literal: router.push(`/admin/users/${user.id}`)
+ 5 fetch calls changed to /api/admin/users...
+pages/users/[id].tsx:
+
+ <Link href="/admin/users">
+ window.location.href = "/admin/users" left unchanged
+ 10 fetch calls changed to `/api/admin/users/${id}`
+pages/customer-service.tsx:
+
+ Template literal: router.push(`/admin/customer-service/${ticket.id}`)
+ Template literal: router.push(`/admin/users/${user.id}`)
+pages/onboarding.tsx:
+
+ 1 fetch call changed to `/api/admin/onboarding?range=${range}`
+pages/customer-service/[id].tsx:
+
+ All 4 route references use /admin/customer-service
+ 7 fetch calls changed to `/api/admin/customer-service/${id}`
+API fetch paths (16 files, 64 calls total):
+
+ grep -rn 'fetch("/admin/' client/src/admin/ returns zero results
+ grep -rn 'fetch(\/admin/' client/src/admin/` returns zero results
+ hooks/useSettings.ts — 2 calls fixed
+ pages/index.tsx — 1 call fixed
+ pages/audit-log.tsx — 2 calls fixed
+ pages/onboarding.tsx — 1 call fixed
+ pages/customer-service.tsx — 7 calls fixed
+ pages/feature-toggles.tsx — 8 calls fixed
+ pages/metrics.tsx — 1 call fixed
+ pages/revenue.tsx — 1 call fixed
+ pages/settings.tsx — 5 calls fixed
+ pages/users/index.tsx — 5 calls fixed
+ pages/users/[id].tsx — 10 calls fixed
+ pages/customer-service/[id].tsx — 7 calls fixed
+ pages/setup/api-keys.tsx — 3 calls fixed
+ pages/setup/email.tsx — 3 calls fixed
+ pages/setup/pages.tsx — 3 calls fixed
+ pages/setup/testimonials.tsx — 5 calls fixed
+Verification searches (all four return zero results):
+
+ Search 1: hrefs missing /admin
+ Search 2: doubled fetch paths (string literals)
+ Search 2b: doubled fetch paths (template literals)
+ Search 3: router string literals missing /admin
+ Search 4: router template literals missing /admin
+Runtime:
+
+ TypeScript compiles: npx tsc --noEmit
+ App starts without errors
+ Sidebar navigation works (all links go to /admin/...)
+ Setup sub-pages navigate correctly
+ Active/highlighted state works on current page
+ Overview page loads data (API fetch returns data)
+ Users list page loads
+ Clicking a user row navigates to /admin/users/{id}
+ Customer service page loads tickets

@@ -1,0 +1,90 @@
+Prompt 25: Fix Admin Sidebar Route Prefixes
+Context
+Production Target
+Next.js 14.2.18 (App Router) + Supabase + Vercel
+This module lives at packages/admin/ in the monorepo
+All admin pages are routed under /admin/ in the Next.js App Router (e.g., /admin/users, /admin/setup/branding)
+Problem
+Every sidebar href in AdminSidebar.tsx and SetupSidebar.tsx is missing the /admin prefix. The sidebar uses paths like /users, /setup, /settings — but the actual Next.js routes are at /admin/users, /admin/setup, /admin/settings.
+
+What happens:
+
+Clicking "Setup" navigates to /setup/branding → 404 error
+Clicking "Users" navigates to /users → caught by CMS [slug] catch-all, shows blank CMS page instead of admin users page
+Same problem for every other sidebar link: Metrics, Audit Log, Revenue, Feature Toggles, Customer Service, Onboarding, Settings
+The "Back" link in the drill-in view (Setup sub-pages) also uses href="/" instead of href="/admin"
+Impact
+Every single navigation link in the admin sidebar is broken. Users can only reach admin pages by typing URLs directly.
+
+Fix
+File 1: client/src/admin/layout/AdminSidebar.tsx
+Prefix every href value with /admin. Here is the complete list of changes:
+
+Navigation items array (around line 50-79):
+
+"/""              → "/admin"
+"/users"          → "/admin/users"
+"/metrics"        → "/admin/metrics"
+"/audit-log"      → "/admin/audit-log"
+"/revenue"        → "/admin/revenue"
+"/setup"          → "/admin/setup"
+"/setup/branding" → "/admin/setup/branding"
+"/setup/content"  → "/admin/setup/content"
+"/setup/pages"    → "/admin/setup/pages"
+"/setup/pricing"  → "/admin/setup/pricing"
+"/setup/social"   → "/admin/setup/social"
+"/setup/features" → "/admin/setup/features"
+"/setup/api-keys" → "/admin/setup/api-keys"
+"/setup/email"    → "/admin/setup/email"
+"/setup/ai"       → "/admin/setup/ai"
+"/setup/security" → "/admin/setup/security"
+"/setup/testimonials" → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+"/feature-toggles"     → "/admin/feature-toggles"
+"/customer-service"    → "/admin/customer-service"
+"/onboarding"          → "/admin/onboarding"
+"/settings"            → "/admin/settings"
+"Back" link in the drill-in view (around line 132):
+
+href="/" → href="/admin"
+Active state check (around line 92): The pathname.startsWith(item.href) logic should still work correctly since usePathname() returns the full path (e.g., /admin/setup/branding). Verify that the active highlighting works after the change.
+
+File 2: client/src/admin/layout/SetupSidebar.tsx
+Same prefix fix for the setup nav items array:
+
+"/setup/branding"      → "/admin/setup/branding"
+"/setup/content"       → "/admin/setup/content"
+"/setup/pages"         → "/admin/setup/pages"
+"/setup/pricing"       → "/admin/setup/pricing"
+"/setup/social"        → "/admin/setup/social"
+"/setup/features"      → "/admin/setup/features"
+"/setup/api-keys"      → "/admin/setup/api-keys"
+"/setup/email"         → "/admin/setup/email"
+"/setup/ai"            → "/admin/setup/ai"
+"/setup/security"      → "/admin/setup/security"
+"/setup/testimonials"  → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+Also check for any "Back" or parent links in this file and prefix them with /admin.
+
+CRITICAL RULES
+ONLY change href string values — do NOT change any component logic, styling, or structure
+Every href that starts with / must be prefixed with /admin (except if it already starts with /admin)
+Do NOT change the usePathname() logic — it already returns the full path
+Do NOT add or remove any imports, exports, or components
+Search the entire client/src/admin/ directory for any other files containing hardcoded route paths that may need the same fix (e.g., pages that use router.push("/setup/..."))
+Verification Checklist
+ Every href in AdminSidebar.tsx starts with /admin
+ Every href in SetupSidebar.tsx starts with /admin
+ The "Back" link in AdminSidebar drill-in view uses /admin
+ grep -rn 'href: "/' client/src/admin/layout/ shows no hrefs without /admin prefix
+ Search entire codebase for other hardcoded routes: grep -rn '"/setup/' client/src/admin/ — all should have /admin prefix
+ Search for router.push calls: grep -rn 'router.push\|router.replace\|redirect(' client/src/admin/ — all route strings should have /admin prefix
+ TypeScript compiles: npx tsc --noEmit
+ App starts and clicking "Setup" in admin sidebar navigates to /admin/setup
+ Clicking "Users" navigates to /admin/users
+ Clicking "Settings" navigates to /admin/settings
+ Setup drill-in sub-pages (Branding, Content, etc.) navigate correctly
+ "Back" button in Setup drill-in view returns to /admin
+ Active/highlighted state works correctly for current page

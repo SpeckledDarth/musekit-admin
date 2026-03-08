@@ -1,0 +1,182 @@
+Prompt 25: Remove basePath and Fix All Route Prefixes for Monorepo
+Context
+Production Target
+Next.js 14.2.18 (App Router) + Supabase + Vercel
+This module lives at packages/admin/ in a Turborepo monorepo
+All admin pages are routed under /admin/ via the App Router directory structure (apps/web/src/app/admin/...)
+All admin API routes are at /api/admin/... (apps/web/src/app/api/admin/...)
+There is no basePath in the monorepo's Next.js config
+Problem: basePath Conflict
+This admin module was built as a standalone Repl with basePath: "/admin" in next.config.js. That setting causes Next.js to automatically prepend /admin to all <Link href> and router.push() calls. So the code uses paths like /users and /setup/branding, relying on basePath to produce /admin/users and /admin/setup/branding.
+
+In the monorepo, basePath does not exist. Routes are handled by the App Router directory structure. So:
+
+href="/users" navigates to /users (wrong — should be /admin/users)
+href="/setup/branding" navigates to /setup/branding (wrong — should be /admin/setup/branding)
+fetch("/admin/api/admin/overview") calls /admin/api/admin/overview (wrong — should be /api/admin/overview)
+The /admin prefix in fetch paths was doubled by basePath — the code has /admin/api/admin/... but the actual monorepo API routes are at /api/admin/....
+
+Impact
+Every sidebar navigation link is broken — pages either 404 or land on the wrong route
+API calls are hitting wrong endpoints — the /admin/api/admin/... prefix is wrong for the monorepo
+Fix — Three Categories of Changes
+Category 1: Remove basePath from next.config.js
+If next.config.js (or next.config.mjs / next.config.ts) contains basePath: "/admin", remove that line. It is not needed in the monorepo — the App Router directory structure handles the /admin prefix.
+
+Category 2: Page Route Hrefs — Add /admin Prefix
+Every href, router.push(), router.replace(), and window.location.href that points to an admin page needs the /admin prefix added.
+
+Files and specific changes:
+
+client/src/admin/layout/AdminSidebar.tsx
+All navigation items — change every href value:
+
+"/"               → "/admin"
+"/users"          → "/admin/users"
+"/metrics"        → "/admin/metrics"
+"/audit-log"      → "/admin/audit-log"
+"/revenue"        → "/admin/revenue"
+"/setup"          → "/admin/setup"
+"/setup/branding" → "/admin/setup/branding"
+"/setup/content"  → "/admin/setup/content"
+"/setup/pages"    → "/admin/setup/pages"
+"/setup/pricing"  → "/admin/setup/pricing"
+"/setup/social"   → "/admin/setup/social"
+"/setup/features" → "/admin/setup/features"
+"/setup/api-keys" → "/admin/setup/api-keys"
+"/setup/email"    → "/admin/setup/email"
+"/setup/ai"       → "/admin/setup/ai"
+"/setup/security" → "/admin/setup/security"
+"/setup/testimonials"  → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+"/feature-toggles"     → "/admin/feature-toggles"
+"/customer-service"    → "/admin/customer-service"
+"/onboarding"          → "/admin/onboarding"
+"/settings"            → "/admin/settings"
+Also fix the "Back" link in the drill-in view:
+
+href="/" → href="/admin"
+Note: window.location.href = "/admin" in the sign-out handler is already correct — leave it.
+
+client/src/admin/layout/SetupSidebar.tsx
+All setup nav items — add /admin prefix to every href:
+
+"/setup/branding"      → "/admin/setup/branding"
+"/setup/content"       → "/admin/setup/content"
+"/setup/pages"         → "/admin/setup/pages"
+"/setup/pricing"       → "/admin/setup/pricing"
+"/setup/social"        → "/admin/setup/social"
+"/setup/features"      → "/admin/setup/features"
+"/setup/api-keys"      → "/admin/setup/api-keys"
+"/setup/email"         → "/admin/setup/email"
+"/setup/ai"            → "/admin/setup/ai"
+"/setup/security"      → "/admin/setup/security"
+"/setup/testimonials"  → "/admin/setup/testimonials"
+"/setup/css-dashboard" → "/admin/setup/css-dashboard"
+"/setup/passivepost"   → "/admin/setup/passivepost"
+client/src/admin/layout/AdminHeader.tsx
+router.push("/")         → router.push("/admin")
+router.push("/settings") → router.push("/admin/settings")
+Note: window.location.href = "/admin" is already correct — leave it.
+
+client/src/admin/layout/Breadcrumb.tsx
+{ label: "Admin", href: "/" } → { label: "Admin", href: "/admin" }
+client/src/admin/pages/index.tsx (Overview/dashboard page)
+Quick action card hrefs:
+
+href: "/users"     → href: "/admin/users"
+href: "/audit-log" → href: "/admin/audit-log"
+href: "/settings"  → href: "/admin/settings"
+client/src/admin/pages/setup/index.tsx
+router.replace("/setup/branding") → router.replace("/admin/setup/branding")
+client/src/admin/pages/users/[id].tsx
+<Link href="/users"> → <Link href="/admin/users">
+client/src/admin/pages/customer-service/[id].tsx
+All 4 occurrences:
+
+router.push("/customer-service")   → router.push("/admin/customer-service")
+<Link href="/customer-service">    → <Link href="/admin/customer-service">
+onAction={() => router.push("/customer-service")} → onAction={() => router.push("/admin/customer-service")}
+Category 3: API Fetch Paths — Remove basePath /admin Prefix
+Every fetch() call currently uses /admin/api/admin/... because basePath was prepending /admin. In the monorepo, the actual API routes are at /api/admin/.... Remove the leading /admin from every fetch path.
+
+Rule: Change /admin/api/admin/... → /api/admin/...
+
+Files and specific changes:
+
+client/src/admin/hooks/useSettings.ts
+fetch("/admin/api/admin/setup/settings")  → fetch("/api/admin/setup/settings")
+(2 occurrences — one GET, one PUT)
+
+client/src/admin/pages/index.tsx (Overview)
+fetch("/admin/api/admin/overview") → fetch("/api/admin/overview")
+client/src/admin/pages/audit-log.tsx
+fetch("/admin/api/admin/audit-log-filters") → fetch("/api/admin/audit-log-filters")
+client/src/admin/pages/customer-service.tsx
+fetch("/admin/api/admin/customer-service")              → fetch("/api/admin/customer-service")
+fetch("/admin/api/admin/customer-service?type=tickets")  → fetch("/api/admin/customer-service?type=tickets")
+(Apply to all occurrences — approximately 8 fetch calls in this file)
+
+client/src/admin/pages/feature-toggles.tsx
+fetch("/admin/api/admin/setup/feature-toggles") → fetch("/api/admin/setup/feature-toggles")
+(Apply to all occurrences — approximately 7 fetch calls in this file)
+
+client/src/admin/pages/metrics.tsx
+fetch("/admin/api/admin/metrics") → fetch("/api/admin/metrics")
+client/src/admin/pages/revenue.tsx
+Search for any fetch("/admin/api/admin/revenue") and change to fetch("/api/admin/revenue").
+
+All other page files
+Run this search across the entire codebase to catch any remaining fetch paths:
+
+grep -rn 'fetch("/admin/' client/src/admin/
+Every match should have the leading /admin removed so /admin/api/admin/... becomes /api/admin/....
+
+CRITICAL RULES
+Page routes: Add /admin prefix to every href, router.push(), router.replace(), and redirect() that navigates to an admin page
+API fetch paths: Remove the leading /admin from /admin/api/admin/... → /api/admin/...
+Do NOT change any component logic, styling, props, types, or exports — only change string values
+Do NOT change usePathname() logic — in the monorepo, usePathname() returns the full path including /admin (e.g., /admin/setup/branding), so pathname.startsWith("/admin/setup") will work correctly after this change
+Exhaustive search required — after making all listed changes, run these three searches to catch anything missed:
+# Find page routes missing /admin prefix (should return 0 results):
+grep -rn 'href.*"/' client/src/admin/ | grep -v '"/admin' | grep -v '"/api' | grep -v 'http'
+# Find API fetch paths with doubled /admin prefix (should return 0 results):
+grep -rn 'fetch("/admin/' client/src/admin/
+# Find router.push/replace missing /admin prefix (should return 0 results):
+grep -rn 'router\.\(push\|replace\)("/' client/src/admin/ | grep -v '"/admin'
+Verification Checklist
+basePath removal:
+
+ next.config.js does NOT contain basePath: "/admin" (remove it if present)
+Sidebar navigation (AdminSidebar.tsx): 2. [ ] Every href in the nav items array starts with /admin
+
+ The "Back" link uses href="/admin"
+ Active state highlighting still works (test by navigating to /admin/users and confirming "Users" is highlighted)
+Setup sidebar (SetupSidebar.tsx): 5. [ ] Every href starts with /admin/setup/
+
+Header (AdminHeader.tsx): 6. [ ] router.push calls use /admin or /admin/settings
+
+Breadcrumb (Breadcrumb.tsx): 7. [ ] Root breadcrumb href is /admin
+
+Page-level links: 8. [ ] pages/index.tsx — quick action card hrefs use /admin/...
+
+ pages/setup/index.tsx — redirect uses /admin/setup/branding
+ pages/users/[id].tsx — back link uses /admin/users
+ pages/customer-service/[id].tsx — all 4 route references use /admin/customer-service
+API fetch paths: 12. [ ] grep -rn 'fetch("/admin/' client/src/admin/ returns zero results
+
+ All fetch calls use /api/admin/... (not /admin/api/admin/...)
+Exhaustive search (all three must return zero results): 14. [ ] grep -rn 'href.*"/' client/src/admin/ | grep -v '"/admin' | grep -v '"/api' | grep -v 'http' — zero results
+
+ grep -rn 'fetch("/admin/' client/src/admin/ — zero results
+ grep -rn 'router\.\(push\|replace\)("/' client/src/admin/ | grep -v '"/admin' — zero results
+Runtime: 17. [ ] TypeScript compiles: npx tsc --noEmit
+
+ App starts without errors
+ Clicking "Setup" in sidebar navigates to /admin/setup
+ Clicking "Users" navigates to /admin/users
+ Setup sub-pages (Branding, Content, etc.) navigate correctly
+ "Back" button returns to /admin
+ Overview page loads data (API fetch works)
+ Active/highlighted state works on current page
