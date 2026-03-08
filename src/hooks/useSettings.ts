@@ -10,7 +10,7 @@ export function useSettings(prefix: string) {
   useEffect(() => {
     async function load() {
       try {
-        const res = await fetch("/admin/api/admin/setup/settings");
+        const res = await fetch("/api/admin/setup/settings");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         const mapped: Record<string, string> = {};
@@ -50,7 +50,7 @@ export function useSettings(prefix: string) {
         key,
         value,
       }));
-      const res = await fetch("/admin/api/admin/setup/settings", {
+      const res = await fetch("/api/admin/setup/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings: settingsArray }),

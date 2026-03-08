@@ -46,17 +46,17 @@ src/
 docs/                   # Sprint plans and documentation
 ```
 
-### Base Path
+### Route Prefixes
 
-The app is served under `basePath: "/admin"` (configured in `next.config.js`). This means:
-- All pages are accessed at `/admin/...` (e.g., `/admin/users`, `/admin/setup/branding`)
-- API routes are at `/admin/api/admin/...`
-- Next.js `<Link>` and `router.push()` automatically prepend `/admin`
-- Manual `fetch()` calls and `window.location.href` must use the full `/admin/...` path
+All admin routes use explicit `/admin` prefix (no `basePath` in `next.config.js`):
+- All page hrefs, `router.push()`, `router.replace()`, and `<Link href>` use `/admin/...` (e.g., `/admin/users`, `/admin/setup/branding`)
+- API fetch calls use `/api/admin/...` (e.g., `/api/admin/users`, `/api/admin/setup/settings`)
+- `usePathname()` returns the full path including `/admin` (e.g., `/admin/setup/branding`)
+- `window.location.href` uses `/admin/...` for full-page navigations
 
 ### Key Patterns
 
-- **API Routes**: All Supabase admin (service role) operations go through `/admin/api/admin/*` API routes to keep the service role key server-side only
+- **API Routes**: All Supabase admin (service role) operations go through `/api/admin/*` API routes to keep the service role key server-side only
 - **Admin Auth**: All API routes use `verifyAdmin()` from `src/lib/admin-auth.ts` — supports both Bearer token (programmatic) and Supabase SSR cookies (browser) via `@supabase/ssr`
 - **Client Pages**: Pages fetch data from API routes using `fetch()`
 - **UI Components**: Built from scratch using Tailwind CSS, following shadcn/ui patterns
@@ -210,3 +210,12 @@ Full migration to `next/navigation` for App Router compatibility — all compone
 - **Key API changes**: `router.query` → `useParams()` for route params and `useSearchParams()` for query strings; `router.pathname` → `usePathname()`; `router.replace({pathname, query})` → `router.replace(pathname + "?" + params.toString())`
 - All files using `next/navigation` hooks have `"use client"` directive
 - Zero files import from `next/router`
+
+### Prompt 25: basePath Removal & Route Prefix Fix (Session 19)
+Removed `basePath: "/admin"` from `next.config.js` and fixed all route prefixes for monorepo compatibility:
+- **basePath removed**: No longer in `next.config.js`; redirect from `/` to `/admin` also removed
+- **Page routes**: All hrefs, `router.push()`, `router.replace()`, `<Link href>` now use explicit `/admin/...` prefix (22 sidebar items, 3 quick actions, 6 page files with route references)
+- **API fetch paths**: Changed from `/admin/api/admin/...` to `/api/admin/...` across 16 files, 64 fetch calls
+- **Active state guards**: Changed `item.href !== "/"` to `item.href !== "/admin"` in AdminSidebar (3 occurrences)
+- **Breadcrumb**: Root crumb href changed from `"/"` to `"/admin"`
+- **Left unchanged**: `window.location.href = "/admin"` in sign-out handlers, `window.location.href = "/admin/users"` in user detail page

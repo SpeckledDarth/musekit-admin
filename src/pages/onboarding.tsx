@@ -71,7 +71,7 @@ export default function OnboardingPage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const res = await fetch(`/admin/api/admin/onboarding?range=${range}`);
+        const res = await fetch(`/api/admin/onboarding?range=${range}`);
         if (!res.ok) throw new Error("Failed to fetch onboarding data");
         const data = await res.json();
         setFunnel(data.funnel || []);

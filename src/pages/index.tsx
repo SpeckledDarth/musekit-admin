@@ -53,7 +53,7 @@ export default function OverviewPage() {
   useEffect(() => {
     async function fetchMetrics() {
       try {
-        const res = await fetch("/admin/api/admin/overview");
+        const res = await fetch("/api/admin/overview");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setMetrics(data);
@@ -111,19 +111,19 @@ export default function OverviewPage() {
     {
       title: "Manage Users",
       description: "View and manage user accounts",
-      href: "/users",
+      href: "/admin/users",
       icon: Users,
     },
     {
       title: "View Audit Logs",
       description: "Review system activity",
-      href: "/audit-log",
+      href: "/admin/audit-log",
       icon: ScrollText,
     },
     {
       title: "Settings",
       description: "Configure admin settings",
-      href: "/settings",
+      href: "/admin/settings",
       icon: Settings,
     },
   ];

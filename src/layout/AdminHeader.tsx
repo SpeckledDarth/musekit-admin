@@ -15,9 +15,9 @@ export function AdminHeader() {
 
   function handleAvatarAction(action: "dashboard" | "settings" | "sign-out") {
     if (action === "dashboard") {
-      router.push("/");
+      router.push("/admin");
     } else if (action === "settings") {
-      router.push("/settings");
+      router.push("/admin/settings");
     } else if (action === "sign-out") {
       supabase.auth.signOut().then(() => {
         window.location.href = "/admin";

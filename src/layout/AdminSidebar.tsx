@@ -47,36 +47,36 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Overview", href: "/", icon: LayoutDashboard, section: "Main" },
-  { label: "Users", href: "/users", icon: Users, section: "Main" },
-  { label: "Metrics", href: "/metrics", icon: BarChart3, section: "Main" },
-  { label: "Audit Log", href: "/audit-log", icon: ScrollText, section: "Main" },
-  { label: "Revenue", href: "/revenue", icon: DollarSign, section: "Main" },
+  { label: "Overview", href: "/admin", icon: LayoutDashboard, section: "Main" },
+  { label: "Users", href: "/admin/users", icon: Users, section: "Main" },
+  { label: "Metrics", href: "/admin/metrics", icon: BarChart3, section: "Main" },
+  { label: "Audit Log", href: "/admin/audit-log", icon: ScrollText, section: "Main" },
+  { label: "Revenue", href: "/admin/revenue", icon: DollarSign, section: "Main" },
   {
     label: "Setup",
-    href: "/setup",
+    href: "/admin/setup",
     icon: Sliders,
     section: "Configuration",
     children: [
-      { label: "Branding", href: "/setup/branding", icon: Paintbrush },
-      { label: "Content", href: "/setup/content", icon: FileText },
-      { label: "Pages", href: "/setup/pages", icon: FileIcon },
-      { label: "Pricing", href: "/setup/pricing", icon: CreditCard },
-      { label: "Social Links", href: "/setup/social", icon: Share2 },
-      { label: "Features", href: "/setup/features", icon: Puzzle },
-      { label: "API Keys", href: "/setup/api-keys", icon: Key },
-      { label: "Email Templates", href: "/setup/email", icon: Mail },
-      { label: "AI / Support", href: "/setup/ai", icon: Bot },
-      { label: "Security", href: "/setup/security", icon: ShieldCheck },
-      { label: "Testimonials", href: "/setup/testimonials", icon: MessageSquare },
-      { label: "CSS Dashboard", href: "/setup/css-dashboard", icon: Palette },
-      { label: "PassivePost", href: "/setup/passivepost", icon: Megaphone },
+      { label: "Branding", href: "/admin/setup/branding", icon: Paintbrush },
+      { label: "Content", href: "/admin/setup/content", icon: FileText },
+      { label: "Pages", href: "/admin/setup/pages", icon: FileIcon },
+      { label: "Pricing", href: "/admin/setup/pricing", icon: CreditCard },
+      { label: "Social Links", href: "/admin/setup/social", icon: Share2 },
+      { label: "Features", href: "/admin/setup/features", icon: Puzzle },
+      { label: "API Keys", href: "/admin/setup/api-keys", icon: Key },
+      { label: "Email Templates", href: "/admin/setup/email", icon: Mail },
+      { label: "AI / Support", href: "/admin/setup/ai", icon: Bot },
+      { label: "Security", href: "/admin/setup/security", icon: ShieldCheck },
+      { label: "Testimonials", href: "/admin/setup/testimonials", icon: MessageSquare },
+      { label: "CSS Dashboard", href: "/admin/setup/css-dashboard", icon: Palette },
+      { label: "PassivePost", href: "/admin/setup/passivepost", icon: Megaphone },
     ],
   },
-  { label: "Feature Toggles", href: "/feature-toggles", icon: ToggleLeft, section: "Configuration" },
-  { label: "Customer Service", href: "/customer-service", icon: HeadsetIcon, section: "Tools" },
-  { label: "Onboarding", href: "/onboarding", icon: TrendingUp, section: "Tools" },
-  { label: "Settings", href: "/settings", icon: Settings, section: "System" },
+  { label: "Feature Toggles", href: "/admin/feature-toggles", icon: ToggleLeft, section: "Configuration" },
+  { label: "Customer Service", href: "/admin/customer-service", icon: HeadsetIcon, section: "Tools" },
+  { label: "Onboarding", href: "/admin/onboarding", icon: TrendingUp, section: "Tools" },
+  { label: "Settings", href: "/admin/settings", icon: Settings, section: "System" },
 ];
 
 interface AdminSidebarProps {
@@ -89,7 +89,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
   const { user } = useAdmin();
 
   const activeDrillIn = navItems.find(
-    (item) => item.children && pathname.startsWith(item.href) && item.href !== "/"
+    (item) => item.children && pathname.startsWith(item.href) && item.href !== "/admin"
   );
 
   const isDrilledIn = !!activeDrillIn && !collapsed;
@@ -129,7 +129,7 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
         {isDrilledIn && activeDrillIn ? (
           <div>
             <Link
-              href="/"
+              href="/admin"
               className="flex items-center gap-2 px-3 py-2 mb-1 rounded-md text-[13px] text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors duration-150"
             >
               <ArrowLeft className="h-4 w-4 shrink-0" />
@@ -180,9 +180,9 @@ export function AdminSidebar({ collapsed = false, onToggle }: AdminSidebarProps)
                 .map((item) => {
                   const hasChildren = !!item.children;
                   const isActive = hasChildren
-                    ? pathname.startsWith(item.href) && item.href !== "/"
+                    ? pathname.startsWith(item.href) && item.href !== "/admin"
                     : pathname === item.href ||
-                      (item.href !== "/" && pathname.startsWith(item.href));
+                      (item.href !== "/admin" && pathname.startsWith(item.href));
 
                   return (
                     <Link

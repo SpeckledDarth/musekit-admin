@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 export default function SetupIndex() {
   const router = useRouter();
   useEffect(() => {
-    router.replace("/setup/branding");
+    router.replace("/admin/setup/branding");
   }, [router]);
   return null;
 }

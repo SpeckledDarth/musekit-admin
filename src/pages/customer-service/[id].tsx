@@ -82,7 +82,7 @@ export default function TicketDetailPage() {
   async function fetchTicket() {
     setLoading(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`);
+      const res = await fetch(`/api/admin/customer-service/${id}`);
       if (res.status === 404) {
         setNotFound(true);
         return;
@@ -104,7 +104,7 @@ export default function TicketDetailPage() {
     if (!ticket) return;
     setUpdating(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -127,7 +127,7 @@ export default function TicketDetailPage() {
     if (!ticket || !user) return;
     setUpdating(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assigned_to: user.id }),
@@ -147,7 +147,7 @@ export default function TicketDetailPage() {
     if (!commentBody.trim()) return;
     setSubmittingComment(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -173,7 +173,7 @@ export default function TicketDetailPage() {
     setShowCloseDialog(false);
     setUpdating(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "closed" }),
@@ -193,7 +193,7 @@ export default function TicketDetailPage() {
   async function handleReopenTicket() {
     setUpdating(true);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "open" }),
@@ -213,12 +213,12 @@ export default function TicketDetailPage() {
   async function handleDeleteTicket() {
     setShowDeleteDialog(false);
     try {
-      const res = await fetch(`/admin/api/admin/customer-service/${id}`, {
+      const res = await fetch(`/api/admin/customer-service/${id}`, {
         method: "DELETE",
       });
       if (!res.ok) throw new Error("Failed to delete");
       toast.success("Ticket deleted");
-      router.push("/customer-service");
+      router.push("/admin/customer-service");
     } catch (error) {
       toast.error("Failed to delete ticket");
     }
@@ -257,7 +257,7 @@ export default function TicketDetailPage() {
         </Head>
         <div className="space-y-6">
           <Breadcrumb />
-          <Link href="/customer-service">
+          <Link href="/admin/customer-service">
             <Button variant="ghost" size="sm">
               <ArrowLeft className="h-4 w-4 mr-1" /> Back to Customer Service
             </Button>
@@ -267,7 +267,7 @@ export default function TicketDetailPage() {
             title="Ticket Not Found"
             description="The ticket you're looking for doesn't exist or has been deleted."
             actionLabel="Go to Customer Service"
-            onAction={() => router.push("/customer-service")}
+            onAction={() => router.push("/admin/customer-service")}
           />
         </div>
       </>
@@ -283,7 +283,7 @@ export default function TicketDetailPage() {
       <div className="space-y-6">
         <Breadcrumb />
 
-        <Link href="/customer-service">
+        <Link href="/admin/customer-service">
           <Button variant="ghost" size="sm">
             <ArrowLeft className="h-4 w-4 mr-1" /> Back to Customer Service
           </Button>

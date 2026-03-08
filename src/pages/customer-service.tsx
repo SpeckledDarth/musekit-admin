@@ -91,7 +91,7 @@ function SupportTicketsTab() {
   useEffect(() => {
     async function fetchTickets() {
       try {
-        const res = await fetch("/admin/api/admin/customer-service?type=tickets");
+        const res = await fetch("/api/admin/customer-service?type=tickets");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setTickets(data.tickets || []);
@@ -202,7 +202,7 @@ function SupportTicketsTab() {
       onConfirm: async () => {
         setConfirmDialog((p) => ({ ...p, open: false }));
         try {
-          const res = await fetch("/admin/api/admin/customer-service", {
+          const res = await fetch("/api/admin/customer-service", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "bulk_close", ticketIds: Array.from(selectedIds) }),
@@ -218,7 +218,7 @@ function SupportTicketsTab() {
 
   const handleBulkAssign = async () => {
     try {
-      const res = await fetch("/admin/api/admin/customer-service", {
+      const res = await fetch("/api/admin/customer-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "bulk_assign", ticketIds: Array.from(selectedIds) }),
@@ -235,7 +235,7 @@ function SupportTicketsTab() {
   const handleBulkPriority = async (priority: string) => {
     setBulkPriorityOpen(false);
     try {
-      const res = await fetch("/admin/api/admin/customer-service", {
+      const res = await fetch("/api/admin/customer-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "bulk_priority", ticketIds: Array.from(selectedIds), priority }),
@@ -269,7 +269,7 @@ function SupportTicketsTab() {
     }
     setCreating(true);
     try {
-      const res = await fetch("/admin/api/admin/customer-service", {
+      const res = await fetch("/api/admin/customer-service", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "create_ticket", ...newTicket }),
@@ -449,7 +449,7 @@ function SupportTicketsTab() {
                     <TableRow
                       key={ticket.id}
                       className="cursor-pointer"
-                      onClick={() => router.push(`/customer-service/${ticket.id}`)}
+                      onClick={() => router.push(`/admin/customer-service/${ticket.id}`)}
                     >
                       <TableCell onClick={(e) => e.stopPropagation()}>
                         <input
@@ -601,7 +601,7 @@ export default function CustomerServicePage() {
   useEffect(() => {
     async function fetchUsers() {
       try {
-        const res = await fetch("/admin/api/admin/customer-service");
+        const res = await fetch("/api/admin/customer-service");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setUsers(data.users || []);
@@ -617,7 +617,7 @@ export default function CustomerServicePage() {
   useEffect(() => {
     async function fetchTicketCount() {
       try {
-        const res = await fetch("/admin/api/admin/customer-service?type=tickets");
+        const res = await fetch("/api/admin/customer-service?type=tickets");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setTickets(data.tickets || []);
@@ -739,7 +739,7 @@ export default function CustomerServicePage() {
                           <TableRow
                             key={user.id}
                             className="cursor-pointer"
-                            onClick={() => router.push(`/users/${user.id}`)}
+                            onClick={() => router.push(`/admin/users/${user.id}`)}
                           >
                             <TableCell>
                               <div className="flex items-center gap-3">

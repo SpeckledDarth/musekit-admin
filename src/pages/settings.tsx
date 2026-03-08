@@ -59,7 +59,7 @@ export default function SettingsPage() {
 
   const fetchSettings = useCallback(async () => {
     try {
-      const res = await fetch("/admin/api/admin/settings");
+      const res = await fetch("/api/admin/settings");
       if (!res.ok) throw new Error("Failed to fetch settings");
       const data = await res.json();
       setSettings(data.settings || {});
@@ -82,7 +82,7 @@ export default function SettingsPage() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const res = await fetch("/admin/api/admin/settings", {
+      const res = await fetch("/api/admin/settings", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ settings }),
@@ -105,7 +105,7 @@ export default function SettingsPage() {
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
-          const res = await fetch("/admin/api/admin/settings", {
+          const res = await fetch("/api/admin/settings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "purge_audit_logs", olderThanDays: parseInt(purgeDays) }),
@@ -128,7 +128,7 @@ export default function SettingsPage() {
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
-          const res = await fetch("/admin/api/admin/settings", {
+          const res = await fetch("/api/admin/settings", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "reset_settings" }),
@@ -146,7 +146,7 @@ export default function SettingsPage() {
 
   const handleExportData = async () => {
     try {
-      const res = await fetch("/admin/api/admin/settings", {
+      const res = await fetch("/api/admin/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "export_data" }),

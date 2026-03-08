@@ -163,7 +163,7 @@ export default function UserListPage() {
         status: statusFilter,
         page: page.toString(),
       });
-      const res = await fetch(`/admin/api/admin/users?${params}`);
+      const res = await fetch(`/api/admin/users?${params}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setUsers(data.users);
@@ -241,7 +241,7 @@ export default function UserListPage() {
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
-          const res = await fetch("/admin/api/admin/users", {
+          const res = await fetch("/api/admin/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "bulk_suspend", userIds: Array.from(selectedIds) }),
@@ -268,7 +268,7 @@ export default function UserListPage() {
       onConfirm: async () => {
         setConfirmDialog((prev) => ({ ...prev, open: false }));
         try {
-          const res = await fetch("/admin/api/admin/users", {
+          const res = await fetch("/api/admin/users", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ action: "bulk_delete", userIds: Array.from(selectedIds) }),
@@ -318,7 +318,7 @@ export default function UserListPage() {
             status: statusFilter,
             page: p.toString(),
           });
-          promises.push(fetch(`/admin/api/admin/users?${pParams}`).then((r) => r.json()));
+          promises.push(fetch(`/api/admin/users?${pParams}`).then((r) => r.json()));
         }
         const results = await Promise.all(promises);
         allUsers = results.flatMap((r) => r.users || []);
@@ -342,7 +342,7 @@ export default function UserListPage() {
     if (!inviteEmail) return;
     setInviteLoading(true);
     try {
-      const res = await fetch("/admin/api/admin/users", {
+      const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "invite", email: inviteEmail, role: inviteRole }),
@@ -505,7 +505,7 @@ export default function UserListPage() {
                       <TableRow
                         key={user.id}
                         className="cursor-pointer"
-                        onClick={() => router.push(`/users/${user.id}`)}
+                        onClick={() => router.push(`/admin/users/${user.id}`)}
                       >
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <input

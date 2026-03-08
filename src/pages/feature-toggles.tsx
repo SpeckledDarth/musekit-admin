@@ -69,7 +69,7 @@ export default function FeatureTogglesPage() {
 
   async function fetchToggles() {
     try {
-      const res = await fetch("/admin/api/admin/setup/feature-toggles");
+      const res = await fetch("/api/admin/setup/feature-toggles");
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setToggles(data.toggles || []);
@@ -140,7 +140,7 @@ export default function FeatureTogglesPage() {
   const handleToggle = async (id: string, enabled: boolean) => {
     setToggles((prev) => prev.map((t) => (t.id === id ? { ...t, enabled } : t)));
     try {
-      const res = await fetch("/admin/api/admin/setup/feature-toggles", {
+      const res = await fetch("/api/admin/setup/feature-toggles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, enabled }),
@@ -156,7 +156,7 @@ export default function FeatureTogglesPage() {
 
   const handleAddToggle = async () => {
     try {
-      const res = await fetch("/admin/api/admin/setup/feature-toggles", {
+      const res = await fetch("/api/admin/setup/feature-toggles", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newToggle),
@@ -176,7 +176,7 @@ export default function FeatureTogglesPage() {
   const handleEdit = async () => {
     if (!editToggle) return;
     try {
-      const res = await fetch("/admin/api/admin/setup/feature-toggles", {
+      const res = await fetch("/api/admin/setup/feature-toggles", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: editToggle.key, ...editForm }),
@@ -194,7 +194,7 @@ export default function FeatureTogglesPage() {
 
   const handleDelete = async (toggle: FeatureToggle) => {
     try {
-      const res = await fetch("/admin/api/admin/setup/feature-toggles", {
+      const res = await fetch("/api/admin/setup/feature-toggles", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key: toggle.key }),
@@ -241,7 +241,7 @@ export default function FeatureTogglesPage() {
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch("/admin/api/admin/setup/feature-toggles", {
+          fetch("/api/admin/setup/feature-toggles", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id, enabled: true }),
@@ -262,7 +262,7 @@ export default function FeatureTogglesPage() {
     try {
       await Promise.all(
         ids.map((id) =>
-          fetch("/admin/api/admin/setup/feature-toggles", {
+          fetch("/api/admin/setup/feature-toggles", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ id, enabled: false }),
@@ -283,7 +283,7 @@ export default function FeatureTogglesPage() {
     try {
       await Promise.all(
         toDelete.map((t) =>
-          fetch("/admin/api/admin/setup/feature-toggles", {
+          fetch("/api/admin/setup/feature-toggles", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ key: t.key }),

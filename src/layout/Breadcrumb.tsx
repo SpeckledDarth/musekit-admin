@@ -12,7 +12,7 @@ interface BreadcrumbItem {
 
 function generateBreadcrumbs(pathname: string): BreadcrumbItem[] {
   const segments = pathname.split("/").filter(Boolean);
-  const crumbs: BreadcrumbItem[] = [{ label: "Admin", href: "/" }];
+  const crumbs: BreadcrumbItem[] = [{ label: "Admin", href: "/admin" }];
 
   const labels: Record<string, string> = {
     users: "Users",

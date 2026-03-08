@@ -151,7 +151,7 @@ export default function UserDetailPage() {
 
     async function fetchUserData() {
       try {
-        const res = await fetch(`/admin/api/admin/users/${id}`);
+        const res = await fetch(`/api/admin/users/${id}`);
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         setProfile(data.profile);
@@ -207,7 +207,7 @@ export default function UserDetailPage() {
 
     setSaving(true);
     try {
-      const res = await fetch(`/admin/api/admin/users/${id}`, {
+      const res = await fetch(`/api/admin/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editForm),
@@ -231,7 +231,7 @@ export default function UserDetailPage() {
   const handleSuspendUser = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/admin/api/admin/users/${id}`, {
+      const res = await fetch(`/api/admin/users/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: "suspended" }),
@@ -249,7 +249,7 @@ export default function UserDetailPage() {
   const handleDeleteUser = async () => {
     if (!id) return;
     try {
-      const res = await fetch(`/admin/api/admin/users/${id}`, {
+      const res = await fetch(`/api/admin/users/${id}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
@@ -266,7 +266,7 @@ export default function UserDetailPage() {
     if (!newNote.trim() || !id || !adminUser) return;
 
     try {
-      await fetch(`/admin/api/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -297,7 +297,7 @@ export default function UserDetailPage() {
     if (!id || !adminUser || impersonating) return;
 
     try {
-      await fetch(`/admin/api/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -333,7 +333,7 @@ export default function UserDetailPage() {
       return;
     }
     try {
-      const res = await fetch(`/admin/api/admin/users/${id}`, {
+      const res = await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "invite_member", email: inviteEmail.trim(), role: inviteRole }),
@@ -355,7 +355,7 @@ export default function UserDetailPage() {
   const handleChangeRole = async (memberId: string, newRole: string) => {
     if (!id) return;
     try {
-      await fetch(`/admin/api/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "change_role", memberId, role: newRole }),
@@ -370,7 +370,7 @@ export default function UserDetailPage() {
   const handleRemoveMember = async (memberId: string) => {
     if (!id) return;
     try {
-      await fetch(`/admin/api/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "remove_member", memberId }),
@@ -386,7 +386,7 @@ export default function UserDetailPage() {
   const handleRevokeInvite = async (inviteId: string) => {
     if (!id) return;
     try {
-      await fetch(`/admin/api/admin/users/${id}`, {
+      await fetch(`/api/admin/users/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "revoke_invite", inviteId }),
@@ -442,7 +442,7 @@ export default function UserDetailPage() {
         <Breadcrumb />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link href="/users">
+            <Link href="/admin/users">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-1" /> Back
               </Button>

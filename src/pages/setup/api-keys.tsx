@@ -149,7 +149,7 @@ export default function ApiKeysSetup() {
   useEffect(() => {
     async function fetchKeys() {
       try {
-        const res = await fetch("/admin/api/admin/setup/api-keys");
+        const res = await fetch("/api/admin/setup/api-keys");
         if (!res.ok) throw new Error("Failed to fetch");
         const data = await res.json();
         const fetchedKeys: ApiKey[] = data.keys || [];
@@ -217,7 +217,7 @@ export default function ApiKeysSetup() {
 
   const saveEdit = async (keyId: string) => {
     try {
-      await fetch("/admin/api/admin/setup/api-keys", {
+      await fetch("/api/admin/setup/api-keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: keyId, value: editValue }),
@@ -233,7 +233,7 @@ export default function ApiKeysSetup() {
 
   const deleteKey = async (keyId: string) => {
     try {
-      await fetch("/admin/api/admin/setup/api-keys", {
+      await fetch("/api/admin/setup/api-keys", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: keyId }),
