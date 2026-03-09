@@ -1,0 +1,144 @@
+Prompt 40: musekit-admin — CSS Variable Migration (All Pages, Charts, Tables)
+Module Repl
+musekit-admin (GitHub: SpeckledDarth/musekit-admin)
+
+Context
+The admin package renders 28+ pages including dashboards, user management, affiliate management, setup wizards, and data visualizations. Currently, pages use hardcoded Tailwind grays and charts use hardcoded hex/HSL colors. After Prompt 38 (ThemeInjector) and Prompt 39 (shared Tailwind preset), all CSS variables and Tailwind mappings are available. This prompt migrates every admin page to consume them.
+
+Reference: See docs/current/css-variable-contract.md for the complete list of available CSS variables, their types, defaults, and recommended Tailwind class replacements.
+
+Current State (verified March 9, 2026)
+Tailwind Config
+tailwind.config.ts uses hsl(var(--)) pattern (correct) but is missing:
+
+Status colors (success, warning, danger, info)
+Chart colors (chart.primary, chart.secondary, chart.tertiary)
+Font mappings (font-body, font-heading)
+Shadow mappings
+Hardcoded Colors (~15+ references)
+Across layout components and setup pages: bg-white, bg-gray-*, text-gray-*, border-gray-*, hardcoded font-mono references in audit-log, revenue pages.
+
+Chart Hardcoded Colors (CRITICAL)
+metrics.tsx:
+
+Line 387: stroke="hsl(221.2, 83.2%, 53.3%)" (blue) — User Growth chart
+Line 417: stroke="hsl(142, 76%, 36%)" (green) — Revenue Growth chart
+onboarding.tsx:
+
+Lines 201-241: bg-blue-500, bg-indigo-500, bg-purple-500, bg-green-500, bg-teal-500 for funnel stages
+Line 337: gradient #6366f1 for funnel visualization
+revenue.tsx: Hardcoded chart colors (verify exact values)
+
+branding.tsx Hardcoded Default
+Line 128: #3b82f6 as default color picker value
+Lines 400-412: Hardcoded colors in social post watermark preview
+The Fix
+1. Update tailwind.config.ts
+Import the shared preset from @musekit/design-system and extend from it:
+
+import { tailwindPreset } from "@musekit/design-system";
+const config = {
+  presets: [tailwindPreset],
+  content: ["./src/**/*.{js,ts,jsx,tsx}"],
+  // ... keep existing plugins
+};
+This gives the admin package access to all semantic colors, chart colors, fonts, shadows, and radius mappings.
+
+2. Migrate Layout Components
+Replace all hardcoded grays in:
+
+src/layout/AdminHeader.tsx
+src/layout/AdminSidebar.tsx
+src/layout/AdminLayout.tsx
+src/layout/Breadcrumb.tsx
+Use the replacement rules from the CSS Variable Contract (see docs/current/css-variable-contract.md):
+
+bg-white → bg-background
+bg-gray-* → bg-muted or bg-accent
+text-gray-* → text-foreground or text-muted-foreground
+border-gray-* → border-border
+dark:bg-gray-* → dark:bg-background or dark:bg-card
+3. Fix Charts (CRITICAL)
+metrics.tsx — User Growth Chart: Replace:
+
+stroke="hsl(221.2, 83.2%, 53.3%)"
+With:
+
+stroke="var(--chart-primary)"
+metrics.tsx — Revenue Growth Chart: Replace:
+
+stroke="hsl(142, 76%, 36%)"
+With:
+
+stroke="var(--chart-secondary)"
+onboarding.tsx — Funnel Stages: Replace hardcoded bg-blue-500, bg-indigo-500, etc. with:
+
+Stage 1: bg-[var(--accent-rand-1)]
+Stage 2: bg-[var(--accent-rand-2)]
+Stage 3: bg-[var(--accent-rand-3)]
+Stage 4: bg-[var(--accent-rand-4)]
+Stage 5: bg-[var(--accent-rand-5)]
+Replace gradient #6366f1 with var(--chart-primary).
+
+revenue.tsx: Replace any hardcoded chart colors with var(--chart-primary), var(--chart-secondary), var(--chart-tertiary).
+
+4. Fix branding.tsx
+Replace hardcoded #3b82f6 default with a dynamic read from the current palette primary color (read from settings or use var(--palette-primary))
+Replace hardcoded watermark preview colors with CSS variable references
+5. Migrate ALL Setup Pages
+ALL files in src/pages/setup/ — replace hardcoded colors:
+
+ai.tsx, api-keys.tsx (has bg-gray-300 toggle), branding.tsx, content.tsx, css-dashboard.tsx (leave as-is — it embeds PalettePage), email.tsx (has bg-white preview), features.tsx, pages.tsx, passivepost.tsx (has hardcoded chart: fill="hsl(221.2, 83.2%, 53.3%)" on line 505 → replace with fill="var(--chart-primary)"), pricing.tsx, security.tsx, social.tsx, testimonials.tsx (has text-gray-300 star rating)
+6. Migrate ALL Other Admin Pages
+ALL files in src/pages/:
+
+audit-log.tsx — replace font-mono if used for styling (keep for code/ID display)
+campaigns.tsx, customer-service.tsx, feature-toggles.tsx, jobs.tsx
+metrics.tsx (charts — see above)
+onboarding.tsx (charts — see above)
+revenue.tsx (charts — see above)
+index.tsx (admin dashboard — has hardcoded chart HSL values)
+settings.tsx, webhooks.tsx
+users/index.tsx, users/[id].tsx
+customer-service/[id].tsx
+7. Migrate ALL Affiliate Admin Pages
+ALL files in src/pages/affiliates/:
+
+applications.tsx, assets.tsx, broadcasts.tsx, contests.tsx
+discount-codes.tsx, members.tsx, milestones.tsx, networks.tsx
+payout-runs.tsx, settings.tsx, tiers.tsx
+8. Table Styling
+Any custom table styling should use:
+
+--table-stripe-opacity for striped row backgrounds
+--table-border-opacity for row borders
+Tables using the design system's <Table> component will inherit from Prompt 39 changes
+What NOT to Do
+Do NOT change any Supabase queries, data logic, or business logic
+Do NOT change component APIs or export signatures
+Do NOT modify css-dashboard.tsx — it embeds PalettePage which works correctly
+Do NOT remove dark mode variants — replace them with semantic equivalents
+Do NOT change any routing logic
+Verification Checklist
+Tailwind Config
+ tailwind.config.ts imports and uses tailwindPreset from @musekit/design-system
+ bg-success, text-warning, chart-primary, font-heading classes are available
+Hardcoded Color Elimination
+ grep -r "bg-white" src/ returns zero results (excluding css-dashboard.tsx if it imports PalettePage components)
+ grep -r "bg-gray-" src/ returns zero results
+ grep -r "text-gray-" src/ returns zero results
+ grep -r "border-gray-" src/ returns zero results
+ grep -r "dark:bg-gray-" src/ returns zero results
+Charts
+ grep -r "hsl(" src/pages/metrics.tsx returns zero results (no hardcoded HSL)
+ grep -r "#[0-9a-fA-F]\{6\}" src/pages/metrics.tsx returns zero results (no hardcoded hex)
+ grep -r "#[0-9a-fA-F]\{6\}" src/pages/onboarding.tsx returns zero results
+ grep -r "#[0-9a-fA-F]\{6\}" src/pages/revenue.tsx returns zero results
+ metrics.tsx charts use var(--chart-primary) and var(--chart-secondary)
+ onboarding.tsx funnel uses var(--accent-rand-*) variables
+Branding Page
+ grep -r "#3b82f6" src/pages/setup/branding.tsx returns zero results
+ Default color picker value reads from live palette settings
+Build
+ npx tsc --noEmit passes with zero errors
+ No changes to any exports or component APIs
