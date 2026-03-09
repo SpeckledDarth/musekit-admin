@@ -1,0 +1,172 @@
+Prompt 33: Create SettingsProvider + Fix useSettings Auth
+Context
+Production Target
+Next.js 14.2.18 (App Router) + Supabase + Vercel
+This module lives at packages/admin/ in a Turborepo monorepo
+Live Database State (verified March 9, 2026)
+settings table has 72 rows, all palette.* keys
+No branding.*, social.*, features.*, or pricing.* keys exist yet — they will be created when an admin first uses those setup pages
+Settings table schema: id (uuid PK), key (text), value (text) — no updated_at column
+Current State of Admin Code (verified March 9, 2026)
+useSettings(prefix) hook at src/hooks/useSettings.ts: fetches via /api/admin/setup/settings, filters by prefix, provides getSetting, updateSetting, saveSettings
+useSettings fetch calls do NOT include credentials: "include" — auth cookies may not be forwarded
+useSettings saveSettings already throws on error (the calling components catch and show toast) — no need to add toast inside the hook
+Supabase client at src/lib/supabase.ts: uses process.env.NEXT_PUBLIC_SUPABASE_URL || "" — silently creates a broken client when env vars are missing
+Exports from src/lib/supabase.ts: supabase, getSupabaseClient, createSupabaseAdmin, supabaseAdmin, getSupabaseAdmin — all must be preserved
+Problem 1: No Global Settings Context for Public Site
+Admin saves settings but no component outside admin can access them. The public site has no way to read admin-configured values.
+
+Problem 2: useSettings Fetch Calls Missing credentials: "include"
+Auth is cookie-based via Supabase SSR. Without credentials: "include", cookies may not be sent with fetch requests, causing intermittent 401 errors.
+
+Problem 3: Supabase Client Silently Fails
+supabase.ts initializes with empty strings when env vars missing. All subsequent DB calls fail with confusing network errors.
+
+Fix — Three Changes
+Change 1: Create SettingsProvider and useAppSettings Hook
+New file: src/components/SettingsProvider.tsx
+Create a "use client" component that:
+
+Fetches ALL settings from the settings table on mount using the browser client:
+const supabase = getSupabaseClient();
+const { data } = await supabase.from("settings").select("key, value");
+Stores settings in React context as Record<string, string>.
+
+Provides these via context:
+
+getSetting(key: string, defaultValue?: string): string
+getSettingsByPrefix(prefix: string): Record<string, string>
+loading: boolean
+refetch(): Promise<void>
+If called outside the provider or if Supabase fetch fails, returns safe defaults (empty settings, loading=false).
+Context shape:
+
+interface AppSettingsContextType {
+  settings: Record<string, string>;
+  loading: boolean;
+  getSetting: (key: string, defaultValue?: string) => string;
+  getSettingsByPrefix: (prefix: string) => Record<string, string>;
+  refetch: () => Promise<void>;
+}
+New file: src/hooks/useAppSettings.ts
+Export useAppSettings() hook. If called outside the provider, return safe defaults instead of throwing:
+
+export function useAppSettings() {
+  const context = useContext(AppSettingsContext);
+  if (!context) {
+    return {
+      settings: {},
+      loading: false,
+      getSetting: (_key: string, defaultValue = "") => defaultValue,
+      getSettingsByPrefix: (_prefix: string) => ({}),
+      refetch: async () => {},
+    };
+  }
+  return context;
+}
+Change 2: Fix useSettings — Add credentials: "include"
+File: src/hooks/useSettings.ts
+The file has exactly two fetch() calls. Add credentials: "include" to both:
+
+In the load() function (the GET request):
+
+const res = await fetch("/api/admin/setup/settings", {
+  credentials: "include",
+});
+In saveSettings() (the POST request):
+
+const res = await fetch("/api/admin/setup/settings", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  credentials: "include",
+  body: JSON.stringify({ settings: settingsArray }),
+});
+Do NOT change anything else in this file.
+
+Change 3: Update Supabase Client to Use @musekit/database
+File: src/lib/supabase.ts
+Replace the current implementation that defaults to empty strings with one that imports from @musekit/database. Preserve all existing export names so no other admin files need import changes:
+
+import { createBrowserClient, createAdminClient } from "@musekit/database";
+import { createClient } from "@supabase/supabase-js";
+let browserClient: ReturnType<typeof createBrowserClient> | null = null;
+export function getSupabaseClient() {
+  if (browserClient) return browserClient;
+  try {
+    browserClient = createBrowserClient();
+    return browserClient;
+  } catch {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    if (!url || !key) {
+      console.error("Missing Supabase environment variables for admin client");
+    }
+    return createClient(url, key);
+  }
+}
+export const supabase = getSupabaseClient();
+export function createSupabaseAdmin() {
+  try {
+    return createAdminClient();
+  } catch (error) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is not available");
+  }
+}
+export const supabaseAdmin =
+  typeof window === "undefined" ? createSupabaseAdmin() : null;
+export function getSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    throw new Error("supabaseAdmin is only available on the server");
+  }
+  return supabaseAdmin;
+}
+Change 4: Export New Components from Index
+File: src/index.ts
+Add these exports:
+
+export { SettingsProvider } from "./components/SettingsProvider";
+export { useAppSettings } from "./hooks/useAppSettings";
+Critical Rules
+SettingsProvider must be "use client" — uses useState, useEffect, useContext
+useAppSettings must return safe defaults outside the provider — do NOT throw
+Do NOT change useSettings function signatures — only add credentials: "include" to the two fetch calls
+Do NOT modify any setup page files (branding.tsx, social.tsx, etc.)
+Preserve ALL existing exports from src/lib/supabase.ts: supabase, getSupabaseClient, createSupabaseAdmin, supabaseAdmin, getSupabaseAdmin
+SettingsProvider fetches directly from the settings table (not via the admin API) — public components need access without admin auth
+Verification
+File existence
+ls -la src/components/SettingsProvider.tsx src/hooks/useAppSettings.ts
+Expected: both files exist.
+
+Exported from index
+grep -n "SettingsProvider\|useAppSettings" src/index.ts
+Expected: both names appear in export statements.
+
+credentials added to useSettings
+grep -n 'credentials' src/hooks/useSettings.ts
+Expected: exactly 2 results.
+
+Supabase client uses @musekit/database
+grep -n "@musekit/database" src/lib/supabase.ts
+Expected: at least 1 result.
+
+All original supabase exports preserved
+grep -n "export" src/lib/supabase.ts
+Expected: supabase, getSupabaseClient, createSupabaseAdmin, supabaseAdmin, getSupabaseAdmin all present.
+
+Per-file checklist
+ src/components/SettingsProvider.tsx — new "use client" component
+ src/components/SettingsProvider.tsx — fetches ALL settings from settings table
+ src/components/SettingsProvider.tsx — provides getSetting, getSettingsByPrefix, loading, refetch
+ src/components/SettingsProvider.tsx — does not crash if Supabase unavailable
+ src/hooks/useAppSettings.ts — returns safe defaults outside provider
+ src/hooks/useSettings.ts — credentials: "include" on load fetch
+ src/hooks/useSettings.ts — credentials: "include" on save fetch
+ src/hooks/useSettings.ts — no other changes
+ src/lib/supabase.ts — imports from @musekit/database
+ src/lib/supabase.ts — all 5 original exports preserved
+ src/index.ts — exports SettingsProvider and useAppSettings
+ No setup page files modified
+TypeScript compiles
+npx tsc --noEmit
+Expected: no errors.
