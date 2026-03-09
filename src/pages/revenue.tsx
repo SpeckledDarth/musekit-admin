@@ -347,7 +347,7 @@ export default function RevenuePage() {
                         <Line
                           type="monotone"
                           dataKey="mrr"
-                          stroke="hsl(142, 76%, 36%)"
+                          stroke="var(--chart-secondary)"
                           strokeWidth={2}
                           dot={{ r: 3 }}
                         />
@@ -376,7 +376,7 @@ export default function RevenuePage() {
                         />
                         <Bar
                           dataKey="revenue"
-                          fill="hsl(221.2, 83.2%, 53.3%)"
+                          fill="var(--chart-primary)"
                           radius={[4, 4, 0, 0]}
                         />
                       </BarChart>
@@ -438,7 +438,7 @@ export default function RevenuePage() {
                           type="checkbox"
                           checked={allVisibleSelected}
                           onChange={toggleSelectAll}
-                          className="h-4 w-4 rounded border-gray-300"
+                          className="h-4 w-4 rounded border-border"
                         />
                       </TableHead>
                       <TableHead className="cursor-pointer select-none" onClick={() => handleSort("user_id")}>
@@ -477,7 +477,7 @@ export default function RevenuePage() {
                               type="checkbox"
                               checked={selectedIds.has(t.id)}
                               onChange={() => toggleSelect(t.id)}
-                              className="h-4 w-4 rounded border-gray-300"
+                              className="h-4 w-4 rounded border-border"
                             />
                           </TableCell>
                           <TableCell className="font-mono text-xs">

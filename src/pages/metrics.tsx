@@ -169,15 +169,15 @@ export default function MetricsPage() {
   };
 
   const getNpsColor = (score: number) => {
-    if (score >= 70) return "text-green-600";
-    if (score >= 50) return "text-yellow-600";
-    return "text-red-600";
+    if (score >= 70) return "text-success";
+    if (score >= 50) return "text-warning";
+    return "text-danger";
   };
 
   const getNpsBg = (score: number) => {
-    if (score >= 70) return "bg-green-50";
-    if (score >= 50) return "bg-yellow-50";
-    return "bg-red-50";
+    if (score >= 70) return "bg-success/5";
+    if (score >= 50) return "bg-warning/5";
+    return "bg-danger/5";
   };
 
   const kpiCards = kpis
@@ -302,9 +302,9 @@ export default function MetricsPage() {
                     className="flex items-center gap-3 p-2 rounded-md bg-muted/50"
                   >
                     {result.triggered ? (
-                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                      <AlertTriangle className="h-4 w-4 text-danger" />
                     ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
+                      <CheckCircle className="h-4 w-4 text-success" />
                     )}
                     <span className="text-sm">{result.message}</span>
                   </div>
@@ -384,7 +384,7 @@ export default function MetricsPage() {
                         <Line
                           type="monotone"
                           dataKey="users"
-                          stroke="hsl(221.2, 83.2%, 53.3%)"
+                          stroke="var(--chart-primary)"
                           strokeWidth={2}
                           dot={{ r: 3 }}
                         />
@@ -414,7 +414,7 @@ export default function MetricsPage() {
                         <Line
                           type="monotone"
                           dataKey="revenue"
-                          stroke="hsl(142, 76%, 36%)"
+                          stroke="var(--chart-secondary)"
                           strokeWidth={2}
                           dot={{ r: 3 }}
                         />

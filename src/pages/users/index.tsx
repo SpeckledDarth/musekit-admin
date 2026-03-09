@@ -74,7 +74,7 @@ function computeHealthScore(profile: Profile): number {
 }
 
 function HealthScoreBadge({ score }: { score: number }) {
-  const dotColor = score >= 70 ? "bg-green-500" : score >= 40 ? "bg-yellow-500" : "bg-red-500";
+  const dotColor = score >= 70 ? "bg-success" : score >= 40 ? "bg-warning" : "bg-danger";
   return (
     <div className="flex items-center gap-2">
       <span className={`inline-block h-2.5 w-2.5 rounded-full ${dotColor}`} />
@@ -453,7 +453,7 @@ export default function UserListPage() {
                           type="checkbox"
                           checked={selectedIds.size === sortedData.length && sortedData.length > 0}
                           onChange={toggleSelectAll}
-                          className="h-4 w-4 rounded border-gray-300"
+                          className="h-4 w-4 rounded border-border"
                         />
                       </TableHead>
                       <SortableColumnHeader
@@ -512,7 +512,7 @@ export default function UserListPage() {
                             type="checkbox"
                             checked={selectedIds.has(user.id)}
                             onChange={() => toggleSelect(user.id)}
-                            className="h-4 w-4 rounded border-gray-300"
+                            className="h-4 w-4 rounded border-border"
                           />
                         </TableCell>
                         <TableCell>

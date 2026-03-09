@@ -289,8 +289,8 @@ function SupportTicketsTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-yellow-100">
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
+              <div className="p-2 rounded-md bg-warning/10">
+                <AlertCircle className="h-5 w-5 text-warning" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Open</p>
@@ -302,8 +302,8 @@ function SupportTicketsTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-blue-100">
-                <Clock className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-md bg-info/10">
+                <Clock className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">In Progress</p>
@@ -315,8 +315,8 @@ function SupportTicketsTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-md bg-green-100">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="p-2 rounded-md bg-success/10">
+                <CheckCircle className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Resolved</p>
@@ -421,7 +421,7 @@ function SupportTicketsTab() {
                         type="checkbox"
                         checked={allVisibleSelected}
                         onChange={toggleSelectAll}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
                     </TableHead>
                     <TableHead className="cursor-pointer select-none" onClick={() => handleSort("subject")}>
@@ -456,7 +456,7 @@ function SupportTicketsTab() {
                           type="checkbox"
                           checked={selectedIds.has(ticket.id)}
                           onChange={() => toggleSelect(ticket.id)}
-                          className="rounded border-gray-300"
+                          className="rounded border-border"
                         />
                       </TableCell>
                       <TableCell className="font-medium">{ticket.subject}</TableCell>

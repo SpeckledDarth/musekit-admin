@@ -203,7 +203,7 @@ export default function TestimonialsPage() {
               <CardTitle className="text-sm font-medium text-muted-foreground">Approved</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{approvedCount}</div>
+              <div className="text-2xl font-bold text-success">{approvedCount}</div>
             </CardContent>
           </Card>
           <Card>
@@ -277,7 +277,7 @@ export default function TestimonialsPage() {
                                         className={`h-5 w-5 ${
                                           star <= testimonial.rating
                                             ? "fill-yellow-400 text-yellow-400"
-                                            : "text-gray-300"
+                                            : "text-muted-foreground"
                                         }`}
                                       />
                                     </button>
@@ -324,7 +324,7 @@ export default function TestimonialsPage() {
                                   className={`h-4 w-4 ${
                                     star <= testimonial.rating
                                       ? "fill-yellow-400 text-yellow-400"
-                                      : "text-gray-300"
+                                      : "text-muted-foreground"
                                   }`}
                                 />
                               ))}

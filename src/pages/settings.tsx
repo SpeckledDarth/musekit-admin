@@ -330,7 +330,7 @@ export default function SettingsPage() {
                     id="require2fa"
                     checked={settings["admin.require2fa"] === "true"}
                     onChange={(e) => updateSetting("admin.require2fa", e.target.checked ? "true" : "false")}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <label htmlFor="require2fa" className="text-sm font-medium">
                     Require Two-Factor Authentication
@@ -369,7 +369,7 @@ export default function SettingsPage() {
                         id={toggle.key}
                         checked={settings[toggle.key] === "true"}
                         onChange={(e) => updateSetting(toggle.key, e.target.checked ? "true" : "false")}
-                        className="h-4 w-4 rounded border-gray-300"
+                        className="h-4 w-4 rounded border-border"
                       />
                       <label htmlFor={toggle.key} className="text-sm font-medium">
                         {toggle.label}
@@ -412,10 +412,10 @@ export default function SettingsPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 {settings["admin.maintenanceMode"] === "true" && (
-                  <div className="rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+                  <div className="rounded-lg border border-warning bg-warning/5 p-4">
                     <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                      <p className="text-sm font-medium text-yellow-800">
+                      <AlertTriangle className="h-5 w-5 text-warning" />
+                      <p className="text-sm font-medium text-warning">
                         Maintenance mode is currently ON. Users may not be able to access the application.
                       </p>
                     </div>
@@ -428,7 +428,7 @@ export default function SettingsPage() {
                     id="maintenanceMode"
                     checked={settings["admin.maintenanceMode"] === "true"}
                     onChange={(e) => updateSetting("admin.maintenanceMode", e.target.checked ? "true" : "false")}
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-border"
                   />
                   <label htmlFor="maintenanceMode" className="text-sm font-medium">
                     Enable Maintenance Mode
@@ -459,16 +459,16 @@ export default function SettingsPage() {
           </TabsContent>
 
           <TabsContent value="danger">
-            <Card className="border-red-300">
+            <Card className="border-danger">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-red-600">
+                <CardTitle className="flex items-center gap-2 text-danger">
                   <AlertTriangle className="h-5 w-5" />
                   Danger Zone
                 </CardTitle>
                 <CardDescription>Irreversible and destructive actions. Proceed with caution.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-8">
-                <div className="flex items-center justify-between rounded-lg border border-red-200 p-4">
+                <div className="flex items-center justify-between rounded-lg border border-danger/50 p-4">
                   <div>
                     <h4 className="text-sm font-medium">Purge Audit Logs</h4>
                     <p className="text-xs text-muted-foreground">Permanently delete old audit log entries.</p>
@@ -490,7 +490,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border border-red-200 p-4">
+                <div className="flex items-center justify-between rounded-lg border border-danger/50 p-4">
                   <div>
                     <h4 className="text-sm font-medium">Reset All Settings</h4>
                     <p className="text-xs text-muted-foreground">
@@ -503,7 +503,7 @@ export default function SettingsPage() {
                   </Button>
                 </div>
 
-                <div className="flex items-center justify-between rounded-lg border border-red-200 p-4">
+                <div className="flex items-center justify-between rounded-lg border border-danger/50 p-4">
                   <div>
                     <h4 className="text-sm font-medium">Export All Data</h4>
                     <p className="text-xs text-muted-foreground">

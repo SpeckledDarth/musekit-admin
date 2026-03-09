@@ -395,20 +395,20 @@ export default function BrandingPage() {
               </div>
               <div>
                 <label className="text-sm font-medium mb-2 block">Preview</label>
-                <div className="rounded-lg border bg-white p-4 max-w-sm">
+                <div className="rounded-lg border bg-background p-4 max-w-sm">
                   <div className="flex items-center gap-3 mb-3">
-                    <div className="h-10 w-10 rounded-full bg-gray-200" />
+                    <div className="h-10 w-10 rounded-full bg-muted" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-900">Your Brand</p>
-                      <p className="text-xs text-gray-500">Just now</p>
+                      <p className="text-sm font-semibold text-foreground">Your Brand</p>
+                      <p className="text-xs text-muted-foreground">Just now</p>
                     </div>
                   </div>
-                  <p className="text-sm text-gray-700 mb-3">
+                  <p className="text-sm text-foreground mb-3">
                     This is an example social media post to show how the watermark will appear at the bottom of your posts.
                   </p>
-                  <div className="h-32 rounded-md bg-gray-100 mb-3" />
+                  <div className="h-32 rounded-md bg-muted mb-3" />
                   {getSetting("watermarkEnabled", "true") === "true" && (
-                    <p className="text-xs text-gray-400 border-t pt-2">
+                    <p className="text-xs text-muted-foreground border-t pt-2">
                       {getSetting("watermarkText", "Posted via PassivePost")}
                     </p>
                   )}

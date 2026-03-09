@@ -204,8 +204,8 @@ export default function OverviewPage() {
                       <Area
                         type="monotone"
                         dataKey="mrr"
-                        stroke="hsl(262, 83%, 58%)"
-                        fill="hsl(262, 83%, 58%)"
+                        stroke="var(--chart-primary)"
+                        fill="var(--chart-primary)"
                         fillOpacity={0.2}
                         strokeWidth={2}
                       />
@@ -230,7 +230,7 @@ export default function OverviewPage() {
                       <Line
                         type="monotone"
                         dataKey="users"
-                        stroke="hsl(221.2, 83.2%, 53.3%)"
+                        stroke="var(--chart-secondary)"
                         strokeWidth={2}
                         dot={{ r: 3 }}
                       />
@@ -259,7 +259,7 @@ export default function OverviewPage() {
                       />
                       <Bar
                         dataKey="rate"
-                        fill="hsl(0, 84%, 60%)"
+                        fill="var(--chart-tertiary)"
                         radius={[4, 4, 0, 0]}
                       />
                     </BarChart>

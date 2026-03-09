@@ -50,15 +50,15 @@ const dropOffSuggestions: Record<string, string> = {
 };
 
 function getConversionColor(pct: number): string {
-  if (pct >= 70) return "bg-green-500";
-  if (pct >= 40) return "bg-yellow-500";
-  return "bg-red-500";
+  if (pct >= 70) return "bg-success";
+  if (pct >= 40) return "bg-warning";
+  return "bg-danger";
 }
 
 function getConversionTextColor(pct: number): string {
-  if (pct >= 70) return "text-green-600";
-  if (pct >= 40) return "text-yellow-600";
-  return "text-red-600";
+  if (pct >= 70) return "text-success";
+  if (pct >= 40) return "text-warning";
+  return "text-danger";
 }
 
 export default function OnboardingPage() {
@@ -198,8 +198,8 @@ export default function OnboardingPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-blue-500 bg-opacity-10">
-                      <Users className="h-5 w-5 text-blue-500" />
+                    <div className="p-2 rounded-lg bg-[var(--accent-rand-1)] bg-opacity-10">
+                      <Users className="h-5 w-5 text-[var(--accent-rand-1)]" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Total Signups</p>
@@ -211,8 +211,8 @@ export default function OnboardingPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-indigo-500 bg-opacity-10">
-                      <CheckCircle className="h-5 w-5 text-indigo-500" />
+                    <div className="p-2 rounded-lg bg-[var(--accent-rand-2)] bg-opacity-10">
+                      <CheckCircle className="h-5 w-5 text-[var(--accent-rand-2)]" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">Verified Rate</p>
@@ -224,8 +224,8 @@ export default function OnboardingPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-purple-500 bg-opacity-10">
-                      <LogIn className="h-5 w-5 text-purple-500" />
+                    <div className="p-2 rounded-lg bg-[var(--accent-rand-3)] bg-opacity-10">
+                      <LogIn className="h-5 w-5 text-[var(--accent-rand-3)]" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">First Login Rate</p>
@@ -237,8 +237,8 @@ export default function OnboardingPage() {
               <Card>
                 <CardContent className="p-6">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-green-500 bg-opacity-10">
-                      <Zap className="h-5 w-5 text-green-500" />
+                    <div className="p-2 rounded-lg bg-[var(--accent-rand-4)] bg-opacity-10">
+                      <Zap className="h-5 w-5 text-[var(--accent-rand-4)]" />
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground">First Action Rate</p>
@@ -281,7 +281,7 @@ export default function OnboardingPage() {
                         : Math.round((stage.count / funnel[index - 1].count) * 100);
                     const dropOff =
                       index === 0 ? 0 : funnel[index - 1].count - stage.count;
-                    const barColor = index === 0 ? "bg-blue-500" : getConversionColor(conversionFromPrev);
+                    const barColor = index === 0 ? "bg-[var(--accent-rand-1)]" : getConversionColor(conversionFromPrev);
 
                     return (
                       <div key={stage.stage}>
@@ -334,8 +334,8 @@ export default function OnboardingPage() {
                       <AreaChart data={dailySignups} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                         <defs>
                           <linearGradient id="signupGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                            <stop offset="5%" stopColor="var(--chart-primary)" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="var(--chart-primary)" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -358,7 +358,7 @@ export default function OnboardingPage() {
                         <Area
                           type="monotone"
                           dataKey="count"
-                          stroke="#6366f1"
+                          stroke="var(--chart-primary)"
                           strokeWidth={2}
                           fillOpacity={1}
                           fill="url(#signupGradient)"
@@ -374,7 +374,7 @@ export default function OnboardingPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
+                    <AlertTriangle className="h-5 w-5 text-warning" />
                     Drop-off Analysis
                   </CardTitle>
                 </CardHeader>
@@ -387,9 +387,9 @@ export default function OnboardingPage() {
                       {dropOffAnalysis.dropoffCount} users lost &middot; {dropOffAnalysis.conversion}% step conversion
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 p-3 bg-yellow-50 dark:bg-yellow-950/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  <div className="flex items-start gap-2 p-3 bg-warning/5 dark:bg-warning/10 rounded-lg border border-warning dark:border-warning">
+                    <AlertTriangle className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-warning dark:text-warning">
                       {dropOffAnalysis.suggestion}
                     </p>
                   </div>

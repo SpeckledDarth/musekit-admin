@@ -384,10 +384,10 @@ export default function ApiKeysSetup() {
                     <div
                       className={`h-3 w-3 rounded-full ${
                         allConfigured
-                          ? "bg-green-500"
+                          ? "bg-success"
                           : someConfigured
-                            ? "bg-yellow-500"
-                            : "bg-gray-300"
+                            ? "bg-warning"
+                            : "bg-muted"
                       }`}
                     />
                     <span className="font-medium">{group.label}</span>

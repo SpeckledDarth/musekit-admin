@@ -502,7 +502,7 @@ export default function PassivePostSetup() {
                           <XAxis dataKey="type" fontSize={12} />
                           <YAxis fontSize={12} unit="%" />
                           <Tooltip formatter={(value: number) => [`${value}%`, "Engagement Rate"]} />
-                          <Bar dataKey="rate" fill="hsl(221.2, 83.2%, 53.3%)" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="rate" fill="var(--chart-primary)" radius={[4, 4, 0, 0]} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>

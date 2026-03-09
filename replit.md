@@ -226,3 +226,11 @@ Removed `basePath: "/admin"` from `next.config.js` and fixed all route prefixes 
 - **useSettings auth fix** (`src/hooks/useSettings.ts`): Added `credentials: "include"` to both fetch calls (GET and POST) to ensure auth cookies are forwarded.
 - **Supabase client update** (`src/lib/supabase.ts`): Now imports from `@musekit/database` with try/catch fallback to direct `createClient()`. All 5 original exports preserved. `@musekit/database` resolves in monorepo; fallback handles standalone environment.
 - **Exports**: `SettingsProvider` and `useAppSettings` exported from `src/index.ts`.
+
+### Prompt 40: CSS Variable Migration (Session 20)
+- **tailwind.config.ts**: Imports `tailwindPreset` from `@musekit/design-system` with try/catch fallback. Added status colors (success, warning, danger, info), chart colors (chart.primary/secondary/tertiary), font mappings (font-body, font-heading), shadow mappings (theme, theme-md, theme-lg).
+- **Chart colors migrated**: `metrics.tsx`, `revenue.tsx`, `index.tsx`, `passivepost.tsx` — all `hsl()` and hex chart colors replaced with `var(--chart-primary)`, `var(--chart-secondary)`, `var(--chart-tertiary)`.
+- **Onboarding funnel**: `onboarding.tsx` — funnel stage icons use `var(--accent-rand-1)` through `var(--accent-rand-4)`, gradient uses `var(--chart-primary)`, conversion colors use `bg-success`/`bg-warning`/`bg-danger`.
+- **Status colors migrated**: Health scores (`users/index.tsx`, `users/[id].tsx`), NPS scores (`metrics.tsx`), toggle states (`api-keys.tsx`, `feature-toggles.tsx`), service status (`customer-service.tsx`), maintenance warning (`settings.tsx`), drop-off warning (`onboarding.tsx`).
+- **Hardcoded grays eliminated**: `bg-white` → `bg-background`, `bg-gray-*` → `bg-muted`, `text-gray-*` → `text-foreground`/`text-muted-foreground`, `border-gray-*` → `border-border`, `text-gray-300` star ratings → `text-muted-foreground`.
+- **Left unchanged**: Decorative KPI card colors (metrics, revenue, index quick actions), `font-mono` for code/ID display, branding color picker `#3b82f6` defaults, `css-dashboard.tsx`.

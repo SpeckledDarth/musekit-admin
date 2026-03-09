@@ -482,7 +482,7 @@ export default function FeatureTogglesPage() {
                       type="checkbox"
                       checked={pagedToggles.length > 0 && selected.size === pagedToggles.length}
                       onChange={toggleSelectAll}
-                      className="rounded border-gray-300"
+                      className="rounded border-border"
                     />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => handleSort("name")}>
@@ -519,7 +519,7 @@ export default function FeatureTogglesPage() {
                         type="checkbox"
                         checked={selected.has(toggle.id)}
                         onChange={() => toggleSelect(toggle.id)}
-                        className="rounded border-gray-300"
+                        className="rounded border-border"
                       />
                     </TableCell>
                     <TableCell className="font-medium">{toggle.name}</TableCell>
@@ -540,11 +540,11 @@ export default function FeatureTogglesPage() {
                         <button
                           onClick={() => handleToggle(toggle.id, !toggle.enabled)}
                           className={`relative w-9 h-5 rounded-full transition-colors ${
-                            toggle.enabled ? "bg-primary" : "bg-gray-300"
+                            toggle.enabled ? "bg-primary" : "bg-muted"
                           }`}
                         >
                           <span
-                            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-background rounded-full shadow transition-transform ${
                               toggle.enabled ? "translate-x-4" : "translate-x-0"
                             }`}
                           />

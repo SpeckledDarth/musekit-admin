@@ -268,7 +268,7 @@ export default function EmailTemplatesSetup() {
                 </div>
 
                 {showPreview ? (
-                  <div className="border rounded-md p-4 bg-white min-h-[300px]">
+                  <div className="border rounded-md p-4 bg-background min-h-[300px]">
                     <div
                       dangerouslySetInnerHTML={{
                         __html: editing.body,

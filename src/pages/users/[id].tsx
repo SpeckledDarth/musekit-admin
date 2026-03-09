@@ -104,9 +104,9 @@ function computeHealthScore(
 }
 
 function getHealthColor(score: number): { bg: string; text: string; label: string } {
-  if (score >= 70) return { bg: "bg-green-100", text: "text-green-800", label: "Healthy" };
-  if (score >= 40) return { bg: "bg-yellow-100", text: "text-yellow-800", label: "At Risk" };
-  return { bg: "bg-red-100", text: "text-red-800", label: "Critical" };
+  if (score >= 70) return { bg: "bg-success/10", text: "text-success", label: "Healthy" };
+  if (score >= 40) return { bg: "bg-warning/10", text: "text-warning", label: "At Risk" };
+  return { bg: "bg-danger/10", text: "text-danger", label: "Critical" };
 }
 
 interface EditForm {
@@ -564,7 +564,7 @@ export default function UserDetailPage() {
                 <div className="w-full bg-muted rounded-full h-2">
                   <div
                     className={`h-2 rounded-full transition-all ${
-                      healthScore >= 70 ? "bg-green-500" : healthScore >= 40 ? "bg-yellow-500" : "bg-red-500"
+                      healthScore >= 70 ? "bg-success" : healthScore >= 40 ? "bg-warning" : "bg-danger"
                     }`}
                     style={{ width: `${healthScore}%` }}
                   />
