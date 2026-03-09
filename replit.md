@@ -219,3 +219,10 @@ Removed `basePath: "/admin"` from `next.config.js` and fixed all route prefixes 
 - **Active state guards**: Changed `item.href !== "/"` to `item.href !== "/admin"` in AdminSidebar (3 occurrences)
 - **Breadcrumb**: Root crumb href changed from `"/"` to `"/admin"`
 - **Left unchanged**: `window.location.href = "/admin"` in sign-out handlers, `window.location.href = "/admin/users"` in user detail page
+
+### Prompt 33: SettingsProvider + useSettings Auth + Supabase Client (Session 20)
+- **SettingsProvider** (`src/components/SettingsProvider.tsx`): "use client" context provider that fetches ALL settings from `settings` table on mount via browser Supabase client. Provides `getSetting(key, defaultValue?)`, `getSettingsByPrefix(prefix)`, `loading`, `refetch()`. Handles Supabase unavailability gracefully.
+- **useAppSettings** (`src/hooks/useAppSettings.ts`): Hook to consume SettingsProvider context. Returns safe defaults (empty settings, loading=false) if called outside the provider — does NOT throw.
+- **useSettings auth fix** (`src/hooks/useSettings.ts`): Added `credentials: "include"` to both fetch calls (GET and POST) to ensure auth cookies are forwarded.
+- **Supabase client update** (`src/lib/supabase.ts`): Now imports from `@musekit/database` with try/catch fallback to direct `createClient()`. All 5 original exports preserved. `@musekit/database` resolves in monorepo; fallback handles standalone environment.
+- **Exports**: `SettingsProvider` and `useAppSettings` exported from `src/index.ts`.

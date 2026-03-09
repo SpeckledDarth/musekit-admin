@@ -9,6 +9,8 @@ export { ImageUpload } from "./components/ui/ImageUpload";
 export { UserDashboard } from "./components/UserDashboard";
 export { UserProfileSettings } from "./components/UserProfileSettings";
 export { UserAvatarMenu } from "./components/UserAvatarMenu";
+export { SettingsProvider } from "./components/SettingsProvider";
+export { useAppSettings } from "./hooks/useAppSettings";
 
 export { useAdmin } from "./hooks/useAdmin";
 export { useSettings } from "./hooks/useSettings";
